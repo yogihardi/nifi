@@ -3241,6 +3241,11 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         return new LimitedInputStream(rawStream, size);
     }
 
+    public InputStream getContent(final FlowFileRecord flowFile, final String requestor, final String requestUri) throws IOException {
+        // TODO: IMPLEMENT
+        return null;
+    }
+
     private String getReplayFailureReason(final ProvenanceEventRecord event) {
         // Check that the event is a valid type.
         final ProvenanceEventType type = event.getEventType();

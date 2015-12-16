@@ -39,7 +39,11 @@ import org.apache.nifi.connectable.Connection;
 import org.apache.nifi.controller.queue.DropFlowFileState;
 import org.apache.nifi.controller.queue.DropFlowFileStatus;
 import org.apache.nifi.controller.queue.FlowFileQueue;
+import org.apache.nifi.controller.queue.ListFlowFileRequest;
+import org.apache.nifi.controller.queue.ListFlowFileStatus;
 import org.apache.nifi.controller.queue.QueueSize;
+import org.apache.nifi.controller.queue.SortColumn;
+import org.apache.nifi.controller.queue.SortDirection;
 import org.apache.nifi.controller.repository.FlowFileRecord;
 import org.apache.nifi.controller.repository.FlowFileRepository;
 import org.apache.nifi.controller.repository.FlowFileSwapManager;
@@ -103,6 +107,9 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
     private final FlowFileRepository flowFileRepository;
     private final ProvenanceEventRepository provRepository;
     private final ResourceClaimManager resourceClaimManager;
+
+    private final ConcurrentMap<String, DropFlowFileRequest> dropRequestMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ListFlowFileRequest> listRequestMap = new ConcurrentHashMap<>();
 
     // SCHEDULER CANNOT BE NOTIFIED OF EVENTS WITH THE WRITE LOCK HELD! DOING SO WILL RESULT IN A DEADLOCK!
     private final ProcessScheduler scheduler;
@@ -832,7 +839,38 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
         return "FlowFileQueue[id=" + identifier + "]";
     }
 
-    private final ConcurrentMap<String, DropFlowFileRequest> dropRequestMap = new ConcurrentHashMap<>();
+
+    @Override
+    public ListFlowFileStatus listFlowFiles(final String requestIdentifier) {
+        return listFlowFiles(requestIdentifier, SortColumn.QUEUE_POSITION, SortDirection.ASCENDING);
+    }
+
+    @Override
+    public ListFlowFileStatus listFlowFiles(final String requestIdentifier, final SortColumn sortColumn, final SortDirection direction) {
+        // TODO: Implement
+        return null;
+    }
+
+    @Override
+    public ListFlowFileStatus getListFlowFileStatus(final String requestIdentifier) {
+        return listRequestMap.get(requestIdentifier);
+    }
+
+    @Override
+    public ListFlowFileStatus cancelListFlowFileRequest(final String requestIdentifier) {
+        final ListFlowFileRequest request = listRequestMap.remove(requestIdentifier);
+        if (request != null) {
+            request.cancel();
+        }
+
+        return request;
+    }
+
+    @Override
+    public FlowFileRecord getFlowFile(String flowFileUuid) {
+        // TODO: Implement
+        return null;
+    }
 
     @Override
     public DropFlowFileStatus dropFlowFiles(final String requestIdentifier, final String requestor) {
