@@ -354,6 +354,12 @@ public final class DtoFactory {
         return ListFlowFileState.COMPLETE.equals(state) || ListFlowFileState.CANCELED.equals(state) || ListFlowFileState.FAILURE.equals(state);
     }
 
+    /**
+     * Creates a ListingRequestDTO from the specified ListFlowFileStatus.
+     *
+     * @param listingRequest listingRequest
+     * @return dto
+     */
     public ListingRequestDTO createListingRequestDTO(final ListFlowFileStatus listingRequest) {
         final ListingRequestDTO dto = new ListingRequestDTO();
         dto.setId(listingRequest.getRequestIdentifier());
@@ -383,6 +389,12 @@ public final class DtoFactory {
         return dto;
     }
 
+    /**
+     * Creates a FlowFileSummaryDTO from the specified FlowFileSummary.
+     *
+     * @param summary summary
+     * @return dto
+     */
     public FlowFileSummaryDTO createFlowFileSummaryDTO(final FlowFileSummary summary) {
         final FlowFileSummaryDTO dto = new FlowFileSummaryDTO();
         dto.setUuid(summary.getUuid());
@@ -395,6 +407,12 @@ public final class DtoFactory {
         return dto;
     }
 
+    /**
+     * Creates a FlowFileDTO from the specified FlowFileRecord.
+     *
+     * @param record record
+     * @return dto
+     */
     public FlowFileDTO createFlowFileDTO(final FlowFileRecord record) {
         final FlowFileDTO dto = new FlowFileDTO();
         dto.setUuid(record.getAttribute(CoreAttributes.UUID.key()));

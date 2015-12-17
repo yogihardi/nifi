@@ -118,15 +118,20 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
 
     @Override
     public FlowFileRecord getFlowFile(String groupId, String id, String flowFileUuid) {
-        final Connection connection = locateConnection(groupId, id);
-        final FlowFileQueue queue = connection.getFlowFileQueue();
-        final FlowFileRecord flowFile = queue.getFlowFile(flowFileUuid);
+        try {
+            final Connection connection = locateConnection(groupId, id);
+            final FlowFileQueue queue = connection.getFlowFileQueue();
+            final FlowFileRecord flowFile = queue.getFlowFile(flowFileUuid);
 
-        if (flowFile == null) {
-            throw new ResourceNotFoundException(String.format("Unable to find FlowFile '%s' in Connection '%s'.", flowFileUuid, id));
+            if (flowFile == null) {
+                throw new ResourceNotFoundException(String.format("Unable to find FlowFile '%s' in Connection '%s'.", flowFileUuid, id));
+            }
+
+            return flowFile;
+        } catch (final IOException ioe) {
+            logger.error(String.format("Unable to get the flowfile (%s) at this time.", flowFileUuid), ioe);
+            throw new IllegalStateException("Unable to get the FlowFile at this time.");
         }
-
-        return flowFile;
     }
 
     @Override
