@@ -45,7 +45,7 @@ public interface FlowFileSummary {
     /**
      * @return the timestamp (in milliseconds since epoch) at which the FlowFile was added to the queue
      */
-    long lastQueuedTime();
+    long getLastQueuedTime();
 
     /**
      * @return the timestamp (in milliseconds since epoch) at which the FlowFile's greatest ancestor entered the flow

@@ -22,6 +22,11 @@ import java.util.List;
 public interface ListFlowFileStatus {
 
     /**
+     * @return the maximum number of FlowFile Summary objects that should be returned
+     */
+    int getMaxResults();
+
+    /**
      * @return the identifier of the request to drop FlowFiles from the queue
      */
     String getRequestIdentifier();
@@ -72,4 +77,14 @@ public interface ListFlowFileStatus {
      * @return the percentage (an integer between 0 and 100, inclusive) of how close the request is to being completed
      */
     int getCompletionPercentage();
+
+    /**
+     * @return the total number of steps that are required in order to finish the listing
+     */
+    int getTotalStepCount();
+
+    /**
+     * @return the total number of steps that have already been completed. The value returned will be >= 0 and <= the result of calling {@link #getTotalStepCount()}.
+     */
+    int getCompletedStepCount();
 }

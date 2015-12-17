@@ -360,10 +360,14 @@ public final class DtoFactory {
         dto.setState(listingRequest.getState().toString());
         dto.setFailureReason(listingRequest.getFailureReason());
         dto.setFinished(isListingRequestComplete(listingRequest.getState()));
+        dto.setMaxResults(listingRequest.getMaxResults());
+        dto.setSortColumn(listingRequest.getSortColumn().name());
+        dto.setSortDirection(listingRequest.getSortDirection().name());
+        dto.setTotalStepCount(listingRequest.getTotalStepCount());
+        dto.setCompletedStepCount(listingRequest.getCompletedStepCount());
+        dto.setPercentCompleted(listingRequest.getCompletionPercentage());
 
         if (isListingRequestComplete(listingRequest.getState())) {
-            dto.setPercentCompleted(100);
-
             final List<FlowFileSummary> flowFileSummaries = listingRequest.getFlowFileSummaries();
             if (flowFileSummaries != null) {
                 final List<FlowFileSummaryDTO> summaryDtos = new ArrayList<>(flowFileSummaries.size());
@@ -372,8 +376,6 @@ public final class DtoFactory {
                 }
                 dto.setFlowFileSummaries(summaryDtos);
             }
-        } else {
-            dto.setPercentCompleted(50);
         }
 
         return dto;
@@ -383,7 +385,7 @@ public final class DtoFactory {
         final FlowFileSummaryDTO dto = new FlowFileSummaryDTO();
         dto.setUuid(summary.getUuid());
         dto.setFilename(summary.getFilename());
-        dto.setLastQueuedTime(new Date(summary.lastQueuedTime()));
+        dto.setLastQueuedTime(new Date(summary.getLastQueuedTime()));
         dto.setLinageStartDate(new Date(summary.getLineageStartDate()));
         dto.setPenalized(summary.isPenalized());
         dto.setPosition(summary.getPosition());

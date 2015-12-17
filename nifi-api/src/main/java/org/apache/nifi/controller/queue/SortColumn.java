@@ -17,44 +17,92 @@
 
 package org.apache.nifi.controller.queue;
 
+import java.util.Comparator;
+
 /**
  * Specifies which column to sort on when performing a Listing of FlowFiles via
  * {@link FlowFileQueue#listFlowFiles(String, SortColumn, SortDirection)}
  */
-public enum SortColumn {
+public enum SortColumn implements Comparator<FlowFileSummary> {
     /**
      * Sort based on the current position in the queue
      */
-    QUEUE_POSITION,
+    QUEUE_POSITION (new Comparator<FlowFileSummary>() {
+        @Override
+        public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+            return Integer.compare(o1.getPosition(), o2.getPosition());
+        }
+    }),
 
     /**
      * Sort based on the UUID of the FlowFile
      */
-    FLOWFILE_UUID,
+    FLOWFILE_UUID (new Comparator<FlowFileSummary>() {
+        @Override
+        public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+            return o1.getUuid().compareTo(o2.getUuid());
+        }
+    }),
 
     /**
      * Sort based on the 'filename' attribute of the FlowFile
      */
-    FILENAME,
+    FILENAME (new Comparator<FlowFileSummary>() {
+        @Override
+        public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+            return o1.getFilename().compareTo(o2.getFilename());
+        }
+    }),
 
     /**
      * Sort based on the size of the FlowFile
      */
-    FLOWFILE_SIZE,
+    FLOWFILE_SIZE(new Comparator<FlowFileSummary>() {
+        @Override
+        public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+            return Long.compare(o1.getSize(), o2.getSize());
+        }
+    }),
 
     /**
      * Sort based on how long the FlowFile has been sitting in the queue
      */
-    QUEUED_DURATION,
+    QUEUED_DURATION (new Comparator<FlowFileSummary>() {
+        @Override
+        public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+            return -Long.compare(o1.getLastQueuedTime(), o2.getLastQueuedTime());
+        }
+    }),
 
     /**
      * Sort based on the age of the FlowFile. I.e., the time at which the FlowFile's
      * "greatest ancestor" entered the flow
      */
-    FLOWFILE_AGE,
+    FLOWFILE_AGE (new Comparator<FlowFileSummary>() {
+        @Override
+        public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+            return Long.compare(o1.getLineageStartDate(), o2.getLineageStartDate());
+        }
+    }),
 
     /**
      * Sort based on when the FlowFile's penalization ends
      */
-    PENALIZATION;
+    PENALIZATION (new Comparator<FlowFileSummary>() {
+        @Override
+        public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+            return Boolean.compare(o1.isPenalized(), o2.isPenalized());
+        }
+    });
+
+    private final Comparator<FlowFileSummary> comparator;
+
+    private SortColumn(final Comparator<FlowFileSummary> comparator) {
+        this.comparator = comparator;
+    }
+
+    @Override
+    public int compare(final FlowFileSummary o1, final FlowFileSummary o2) {
+        return comparator.compare(o1, o2);
+    }
 }

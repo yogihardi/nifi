@@ -894,12 +894,13 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
         final int numSteps;
         readLock.lock();
         try {
-            numSteps = 1 + swapLocations.size();
+            // numSteps = 1 for each swap location + 1 for active queue + 1 for swap queue.
+            numSteps = 2 + swapLocations.size();
         } finally {
             readLock.unlock("listFlowFiles");
         }
 
-        final ListFlowFileRequest listRequest = new ListFlowFileRequest(requestIdentifier, sortColumn, direction, size(), numSteps);
+        final ListFlowFileRequest listRequest = new ListFlowFileRequest(requestIdentifier, sortColumn, direction, maxResults, size(), numSteps);
 
         final Thread t = new Thread(new Runnable() {
             @Override
@@ -907,6 +908,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                 int position = 0;
                 int resultCount = 0;
                 final List<FlowFileSummary> summaries = new ArrayList<>(activeQueue.size());
+                int completedStepCount = 0;
 
                 // we need a write lock while using the Active Queue because we can't iterate over it - we have to poll from it
                 // continually. This is because the iterator for PriorityQueue does not iterate over the elements in any particular
@@ -935,6 +937,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                     writeLock.unlock("List FlowFiles");
                 }
 
+                listRequest.setCompletedStepCount(++completedStepCount);
+
                 position = activeQueue.size();
                 sourceLoop: while (resultCount < maxResults) {
                     try {
@@ -954,6 +958,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                                         }
                                     }
                                 }
+
+                                listRequest.setCompletedStepCount(++completedStepCount);
                             }
 
                             for (final FlowFileRecord flowFile : swapQueue) {
@@ -966,6 +972,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                                     }
                                 }
                             }
+
+                            listRequest.setCompletedStepCount(++completedStepCount);
                         } finally {
                             readLock.unlock("List FlowFiles");
                         }
@@ -974,6 +982,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                         listRequest.setFailure("Could not read FlowFiles from queue. Check log files for more details.");
                     }
                 }
+
+                listRequest.setFlowFileSummaries(summaries);
             }
         }, "List FlowFiles for Connection " + getIdentifier());
         t.setDaemon(true);
@@ -1018,7 +1028,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
             }
 
             @Override
-            public long lastQueuedTime() {
+            public long getLastQueuedTime() {
                 return lastQueuedTime;
             }
 

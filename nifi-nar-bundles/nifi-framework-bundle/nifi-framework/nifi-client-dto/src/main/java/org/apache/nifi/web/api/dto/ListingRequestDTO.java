@@ -16,12 +16,14 @@
  */
 package org.apache.nifi.web.api.dto;
 
-import com.wordnik.swagger.annotations.ApiModelProperty;
-import org.apache.nifi.web.api.dto.util.TimestampAdapter;
-
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.util.Date;
 import java.util.List;
+
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+
+import org.apache.nifi.web.api.dto.util.TimestampAdapter;
+
+import com.wordnik.swagger.annotations.ApiModelProperty;
 
 public class ListingRequestDTO {
 
@@ -34,6 +36,11 @@ public class ListingRequestDTO {
     private Integer percentCompleted;
     private Boolean finished;
     private String failureReason;
+    private String sortColumn;
+    private String sortDirection;
+    private Integer maxResults;
+    private Integer totalStepCount;
+    private Integer completedStepCount;
 
     private String state;
 
@@ -165,5 +172,66 @@ public class ListingRequestDTO {
 
     public void setFlowFileSummaries(List<FlowFileSummaryDTO> flowFileSummaries) {
         this.flowFileSummaries = flowFileSummaries;
+    }
+
+    /**
+     * @return the column on which the listing is sorted
+     */
+    @ApiModelProperty(value = "The column on which the FlowFiles are sorted.")
+    public String getSortColumn() {
+        return sortColumn;
+    }
+
+    public void setSortColumn(String sortColumn) {
+        this.sortColumn = sortColumn;
+    }
+
+    /**
+     * @return the direction in which the FlowFiles are sorted
+     */
+    @ApiModelProperty(value = "The direction in which the FlowFiles are sorted. Either ASCENDING or DESCENDING.")
+    public String getSortDirection() {
+        return sortDirection;
+    }
+
+    public void setSortDirection(String sortDirection) {
+        this.sortDirection = sortDirection;
+    }
+
+    /**
+     * @return the maximum number of FlowFileSummary objects to return
+     */
+    @ApiModelProperty(value = "The maximum number of FlowFileSummary objects to return")
+    public Integer getMaxResults() {
+        return maxResults;
+    }
+
+    public void setMaxResults(Integer maxResults) {
+        this.maxResults = maxResults;
+    }
+
+
+    /**
+     * @return the total number of steps required to complete the listing
+     */
+    @ApiModelProperty(value = "The total number of steps required to complete the listing")
+    public Integer getTotalStepCount() {
+        return totalStepCount;
+    }
+
+    public void setTotalStepCount(Integer totalStepCount) {
+        this.totalStepCount = totalStepCount;
+    }
+
+    /**
+     * @return the number of steps that have already been completed. This value will be >= 0 and <= the total step count
+     */
+    @ApiModelProperty(value = "The number of steps that have already been completed. This value will be between 0 and the total step count (inclusive)")
+    public Integer getCompletedStepCount() {
+        return completedStepCount;
+    }
+
+    public void setCompletedStepCount(Integer completedStepCount) {
+        this.completedStepCount = completedStepCount;
     }
 }

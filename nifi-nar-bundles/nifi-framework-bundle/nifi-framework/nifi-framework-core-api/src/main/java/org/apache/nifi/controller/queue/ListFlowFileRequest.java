@@ -23,6 +23,7 @@ import java.util.List;
 
 public class ListFlowFileRequest implements ListFlowFileStatus {
     private final String requestId;
+    private final int maxResults;
     private final QueueSize queueSize;
     private final SortColumn sortColumn;
     private final SortDirection sortDirection;
@@ -32,13 +33,14 @@ public class ListFlowFileRequest implements ListFlowFileStatus {
     private ListFlowFileState state;
     private String failureReason;
     private int numSteps;
-    private int numCompletedSteps;
+    private int completedStepCount;
     private long lastUpdated = System.currentTimeMillis();
 
-    public ListFlowFileRequest(final String requestId, final SortColumn sortColumn, final SortDirection sortDirection, final QueueSize queueSize, final int numSteps) {
+    public ListFlowFileRequest(final String requestId, final SortColumn sortColumn, final SortDirection sortDirection, final int maxResults, final QueueSize queueSize, final int numSteps) {
         this.requestId = requestId;
         this.sortColumn = sortColumn;
         this.sortDirection = sortDirection;
+        this.maxResults = maxResults;
         this.queueSize = queueSize;
         this.numSteps = numSteps;
     }
@@ -94,11 +96,10 @@ public class ListFlowFileRequest implements ListFlowFileStatus {
         return Collections.unmodifiableList(flowFileSummaries);
     }
 
-    public synchronized void addFlowFileSummaries(final List<FlowFileSummary> summaries) {
-        // TODO: Implement.
-
+    public synchronized void setFlowFileSummaries(final List<FlowFileSummary> summaries) {
+        this.flowFileSummaries.clear();
+        this.flowFileSummaries.addAll(summaries);
         lastUpdated = System.currentTimeMillis();
-        this.numCompletedSteps++;
     }
 
     @Override
@@ -117,6 +118,25 @@ public class ListFlowFileRequest implements ListFlowFileStatus {
 
     @Override
     public synchronized int getCompletionPercentage() {
-        return (int) (100F * numCompletedSteps / numSteps);
+        return (int) (100F * completedStepCount / numSteps);
+    }
+
+    public synchronized void setCompletedStepCount(final int completedStepCount) {
+        this.completedStepCount = completedStepCount;
+    }
+
+    @Override
+    public int getMaxResults() {
+        return maxResults;
+    }
+
+    @Override
+    public int getTotalStepCount() {
+        return numSteps;
+    }
+
+    @Override
+    public int getCompletedStepCount() {
+        return completedStepCount;
     }
 }
