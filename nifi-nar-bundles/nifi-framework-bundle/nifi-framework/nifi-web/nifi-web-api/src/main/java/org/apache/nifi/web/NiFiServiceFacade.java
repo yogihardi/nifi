@@ -33,6 +33,7 @@ import org.apache.nifi.web.api.dto.ControllerServiceDTO;
 import org.apache.nifi.web.api.dto.CounterDTO;
 import org.apache.nifi.web.api.dto.CountersDTO;
 import org.apache.nifi.web.api.dto.DocumentedTypeDTO;
+import org.apache.nifi.web.api.dto.FlowFileDTO;
 import org.apache.nifi.web.api.dto.FlowSnippetDTO;
 import org.apache.nifi.web.api.dto.FunnelDTO;
 import org.apache.nifi.web.api.dto.LabelDTO;
@@ -118,6 +119,17 @@ public interface NiFiServiceFacade {
      * @return content
      */
     DownloadableContent getContent(Long eventId, String uri, ContentDirection contentDirection);
+
+    /**
+     * Gets the content for the specified flowfile in the specified connection.
+     *
+     * @param groupId group
+     * @param connectionId connection
+     * @param flowfileUuid flowfile
+     * @param uri uri
+     * @return content
+     */
+    DownloadableContent getContent(String groupId, String connectionId, String flowfileUuid, String uri);
 
     /**
      * Retrieves provenance.
@@ -586,6 +598,16 @@ public interface NiFiServiceFacade {
      * @return The ListingRequest
      */
     ListingRequestDTO deleteFlowFileListingRequest(String groupId, String connectionId, String listingRequestId);
+
+    /**
+     * Gets the specified flowfile from the specified connection.
+     *
+     * @param groupId group
+     * @param connectionId The ID of the connection
+     * @param flowFileUuid The UUID of the flowfile
+     * @return The FlowFileDTO
+     */
+    FlowFileDTO getFlowFile(String groupId, String connectionId, String flowFileUuid);
 
     // ----------------------------------------
     // InputPort methods
