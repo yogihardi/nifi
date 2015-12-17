@@ -36,6 +36,7 @@ import org.apache.nifi.web.api.dto.DocumentedTypeDTO;
 import org.apache.nifi.web.api.dto.FlowSnippetDTO;
 import org.apache.nifi.web.api.dto.FunnelDTO;
 import org.apache.nifi.web.api.dto.LabelDTO;
+import org.apache.nifi.web.api.dto.ListingRequestDTO;
 import org.apache.nifi.web.api.dto.NodeDTO;
 import org.apache.nifi.web.api.dto.NodeSystemDiagnosticsDTO;
 import org.apache.nifi.web.api.dto.PortDTO;
@@ -555,6 +556,36 @@ public interface NiFiServiceFacade {
      * @return The DropRequest
      */
     DropRequestDTO deleteFlowFileDropRequest(String groupId, String connectionId, String dropRequestId);
+
+    /**
+     * Creates a new flow file listing request.
+     *
+     * @param groupId group
+     * @param connectionId The ID of the connection
+     * @param listingRequestId The ID of the listing request
+     * @return The ListingRequest
+     */
+    ListingRequestDTO createFlowFileListingRequest(String groupId, String connectionId, String listingRequestId);
+
+    /**
+     * Gets a new flow file listing request.
+     *
+     * @param groupId group
+     * @param connectionId The ID of the connection
+     * @param listingRequestId The ID of the listing request
+     * @return The ListingRequest
+     */
+    ListingRequestDTO getFlowFileListingRequest(String groupId, String connectionId, String listingRequestId);
+
+    /**
+     * Deletes a new flow file listing request.
+     *
+     * @param groupId group
+     * @param connectionId The ID of the connection
+     * @param listingRequestId The ID of the listing request
+     * @return The ListingRequest
+     */
+    ListingRequestDTO deleteFlowFileListingRequest(String groupId, String connectionId, String listingRequestId);
 
     // ----------------------------------------
     // InputPort methods
