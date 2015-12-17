@@ -30,7 +30,7 @@ public class ListFlowFileRequest implements ListFlowFileStatus {
     private final long submissionTime = System.currentTimeMillis();
     private final List<FlowFileSummary> flowFileSummaries = new ArrayList<>();
 
-    private ListFlowFileState state;
+    private ListFlowFileState state = ListFlowFileState.WAITING_FOR_LOCK;
     private String failureReason;
     private int numSteps;
     private int completedStepCount;

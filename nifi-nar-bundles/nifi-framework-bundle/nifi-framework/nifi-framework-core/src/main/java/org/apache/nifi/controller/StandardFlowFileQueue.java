@@ -915,6 +915,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                 // order. Since we need the 'position' of the element in the queue, we need to iterate over them in the proper order.
                 writeLock.lock();
                 try {
+                    logger.debug("{} Acquired lock to perform listing of FlowFiles", StandardFlowFileQueue.this);
+                    listRequest.setState(ListFlowFileState.CALCULATING_LIST);
                     final List<FlowFileRecord> flowFileRecords = new ArrayList<>(activeQueue.size());
 
                     FlowFileRecord flowFile;
@@ -926,6 +928,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                             if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
                                 summaries.add(summarize(flowFile, position));
                                 if (++resultCount >= maxResults) {
+                                    logger.debug("{} Reached max number of results of {} from active queue; listing complete", StandardFlowFileQueue.this, maxResults);
                                     break;
                                 }
                             }
@@ -937,16 +940,19 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                     writeLock.unlock("List FlowFiles");
                 }
 
+                logger.debug("{} Finished listing FlowFiles for active queue with a total of {} results", StandardFlowFileQueue.this, resultCount);
+
                 listRequest.setCompletedStepCount(++completedStepCount);
 
-                position = activeQueue.size();
-                sourceLoop: while (resultCount < maxResults) {
-                    try {
+                if (summaries.size() < maxResults) {
+                    position = activeQueue.size();
+                    sourceLoop: try {
                         // We are now iterating over swap files, and we don't need the write lock for this, just the read lock, since
                         // we are not modifying anything.
                         readLock.lock();
                         try {
                             for (final String location : swapLocations) {
+                                logger.debug("{} Performing listing of FlowFiles for Swap Location {}", StandardFlowFileQueue.this, location);
                                 final List<FlowFileRecord> flowFiles = swapManager.peek(location, StandardFlowFileQueue.this);
                                 for (final FlowFileRecord flowFile : flowFiles) {
                                     position++;
@@ -954,6 +960,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                                     if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
                                         summaries.add(summarize(flowFile, position));
                                         if (++resultCount >= maxResults) {
+                                            logger.debug("{} Reached max number of results of {}; listing complete", StandardFlowFileQueue.this, maxResults);
                                             break sourceLoop;
                                         }
                                     }
@@ -962,12 +969,14 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                                 listRequest.setCompletedStepCount(++completedStepCount);
                             }
 
+                            logger.debug("{} Performing listing of FlowFiles from Swap Queue", StandardFlowFileQueue.this);
                             for (final FlowFileRecord flowFile : swapQueue) {
                                 position++;
 
                                 if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
                                     summaries.add(summarize(flowFile, position));
                                     if (++resultCount >= maxResults) {
+                                        logger.debug("{} Reached max number of results of {}; listing complete", StandardFlowFileQueue.this, maxResults);
                                         break sourceLoop;
                                     }
                                 }
@@ -977,12 +986,19 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                         } finally {
                             readLock.unlock("List FlowFiles");
                         }
+
+                        break sourceLoop;
                     } catch (final IOException ioe) {
                         logger.error("Failed to read swapped FlowFiles in order to perform listing of queue " + StandardFlowFileQueue.this, ioe);
                         listRequest.setFailure("Could not read FlowFiles from queue. Check log files for more details.");
                     }
                 }
 
+                // We have now completed the listing successfully. Set the number of completed steps to the total number of steps. We may have
+                // skipped some steps because we have reached the maximum number of results, so we consider those steps completed.
+                logger.debug("{} Completed listing of FlowFiles", StandardFlowFileQueue.this);
+                listRequest.setCompletedStepCount(listRequest.getTotalStepCount());
+                listRequest.setState(ListFlowFileState.COMPLETE);
                 listRequest.setFlowFileSummaries(summaries);
             }
         }, "List FlowFiles for Connection " + getIdentifier());
@@ -1002,7 +1018,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
         final String uuid = flowFile.getAttribute(CoreAttributes.UUID.key());
         final String filename = flowFile.getAttribute(CoreAttributes.FILENAME.key());
         final long size = flowFile.getSize();
-        final long lastQueuedTime = flowFile.getLastQueueDate();
+        final Long lastQueuedTime = flowFile.getLastQueueDate();
         final long lineageStart = flowFile.getLineageStartDate();
         final boolean penalized = flowFile.isPenalized();
 
@@ -1029,7 +1045,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
 
             @Override
             public long getLastQueuedTime() {
-                return lastQueuedTime;
+                return lastQueuedTime == null ? 0L : lastQueuedTime;
             }
 
             @Override
@@ -1098,6 +1114,18 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
         }
 
         return null;
+    }
+
+
+    @Override
+    public void verifyCanList() throws IllegalStateException {
+        if (connection.getSource().isRunning()) {
+            throw new IllegalStateException("Cannot list the FlowFiles of queue because the connection's source is still running");
+        }
+
+        if (connection.getDestination().isRunning()) {
+            throw new IllegalStateException("Cannot list the FlowFiles of queue because the connection's destination is still running");
+        }
     }
 
     @Override

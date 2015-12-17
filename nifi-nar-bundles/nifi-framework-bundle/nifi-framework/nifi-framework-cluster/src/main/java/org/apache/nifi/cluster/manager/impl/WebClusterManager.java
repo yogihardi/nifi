@@ -2854,14 +2854,14 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
         final NavigableSet<FlowFileSummaryDTO> flowFileSummaries = new TreeSet<>(comparator);
 
         ListFlowFileState state = null;
-        int sumOfPercents = 0;
+        int numStepsCompleted = 0;
+        int numStepsTotal = 0;
         boolean finished = true;
         for (final Map.Entry<NodeIdentifier, ListingRequestDTO> entry : listingRequestMap.entrySet()) {
             final ListingRequestDTO nodeRequest = entry.getValue();
-            Integer percentComplete = nodeRequest.getPercentCompleted();
-            if (percentComplete != null) {
-                sumOfPercents += percentComplete;
-            }
+
+            numStepsCompleted += nodeRequest.getCompletedStepCount();
+            numStepsTotal += nodeRequest.getTotalStepCount();
 
             if (!nodeRequest.getFinished()) {
                 finished = false;
@@ -2895,7 +2895,7 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
         final List<FlowFileSummaryDTO> summaryDTOs = new ArrayList<>(flowFileSummaries);
         listingRequest.setFlowFileSummaries(summaryDTOs);
 
-        final int percentCompleted = sumOfPercents / listingRequestMap.size();
+        final int percentCompleted = numStepsCompleted / numStepsTotal;
         listingRequest.setPercentCompleted(percentCompleted);
         listingRequest.setFinished(finished);
     }

@@ -298,4 +298,11 @@ public interface FlowFileQueue {
      * @throws IOException if unable to read FlowFiles that are stored on some external device
      */
     FlowFileRecord getFlowFile(String flowFileUuid) throws IOException;
+
+    /**
+     * Ensures that a listing can be performed on the queue
+     *
+     * @throws IllegalStateException if the queue is not in a state in which a listing can be performed
+     */
+    void verifyCanList() throws IllegalStateException;
 }
