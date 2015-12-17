@@ -132,13 +132,33 @@ public class ConnectionResource extends ApplicationResource {
     }
 
     /**
+     * Populate the uri's for the specified flowfile listing.
+     *
+     * @param connectionId connection
+     * @param flowFileListing flowfile listing
+     * @return dto
+     */
+    public ListingRequestDTO populateRemainingFlowFileListingContent(final String connectionId, final ListingRequestDTO flowFileListing) {
+        // uri of the listing
+        flowFileListing.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", connectionId, "listing-requests", flowFileListing.getId()));
+
+        // uri of each flowfile
+        if (flowFileListing.getFlowFileSummaries() != null) {
+            for (FlowFileSummaryDTO flowFile : flowFileListing.getFlowFileSummaries()) {
+                populateRemainingFlowFileContent(connectionId, flowFile);
+            }
+        }
+        return flowFileListing;
+    }
+
+    /**
      * Populate the uri's for the specified flowfile.
      *
      * @param connectionId the connection id
      * @param flowFile the flowfile
      * @return the dto
      */
-    private FlowFileSummaryDTO populateRemainingFlowFileContent(final String connectionId, FlowFileSummaryDTO flowFile) {
+    private FlowFileSummaryDTO populateRemainingFlowFileContent(final String connectionId, final FlowFileSummaryDTO flowFile) {
         flowFile.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", connectionId, "flowfiles", flowFile.getUuid()));
         return flowFile;
     }
@@ -1263,8 +1283,8 @@ public class ConnectionResource extends ApplicationResource {
         }
 
         // submit the listing request
-        final ListingRequestDTO listRequest = serviceFacade.createFlowFileListingRequest(groupId, id, listingRequestId);
-        listRequest.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", id, "listing-requests", listRequest.getId()));
+        final ListingRequestDTO listingRequest = serviceFacade.createFlowFileListingRequest(groupId, id, listingRequestId);
+        populateRemainingFlowFileListingContent(id, listingRequest);
 
         // create the revision
         final RevisionDTO revision = new RevisionDTO();
@@ -1273,10 +1293,10 @@ public class ConnectionResource extends ApplicationResource {
         // create the response entity
         final ListingRequestEntity entity = new ListingRequestEntity();
         entity.setRevision(revision);
-        entity.setListingRequest(listRequest);
+        entity.setListingRequest(listingRequest);
 
         // generate the URI where the response will be
-        final URI location = URI.create(listRequest.getUri());
+        final URI location = URI.create(listingRequest.getUri());
         return Response.status(Status.ACCEPTED).location(location).entity(entity).build();
     }
 
@@ -1333,7 +1353,7 @@ public class ConnectionResource extends ApplicationResource {
 
         // get the listing request
         final ListingRequestDTO listingRequest = serviceFacade.getFlowFileListingRequest(groupId, connectionId, listingRequestId);
-        listingRequest.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", connectionId, "listing-requests", listingRequestId));
+        populateRemainingFlowFileListingContent(connectionId, listingRequest);
 
         // create the revision
         final RevisionDTO revision = new RevisionDTO();
@@ -1406,11 +1426,13 @@ public class ConnectionResource extends ApplicationResource {
         }
 
         // delete the listing request
-        final ListingRequestDTO dropRequest = serviceFacade.deleteFlowFileListingRequest(groupId, connectionId, listingRequestId);
-        dropRequest.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", connectionId, "listing-requests", listingRequestId));
+        final ListingRequestDTO listingRequest = serviceFacade.deleteFlowFileListingRequest(groupId, connectionId, listingRequestId);
 
         // prune the results as they were already received when the listing completed
-        dropRequest.setFlowFileSummaries(null);
+        listingRequest.setFlowFileSummaries(null);
+
+        // populate remaining content
+        populateRemainingFlowFileListingContent(connectionId, listingRequest);
 
         // create the revision
         final RevisionDTO revision = new RevisionDTO();
@@ -1419,7 +1441,7 @@ public class ConnectionResource extends ApplicationResource {
         // create the response entity
         final ListingRequestEntity entity = new ListingRequestEntity();
         entity.setRevision(revision);
-        entity.setListingRequest(dropRequest);
+        entity.setListingRequest(listingRequest);
 
         return generateOkResponse(entity).build();
     }
