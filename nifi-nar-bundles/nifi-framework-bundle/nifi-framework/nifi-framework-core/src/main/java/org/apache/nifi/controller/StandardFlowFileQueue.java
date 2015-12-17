@@ -35,11 +35,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.nifi.attribute.expression.language.PreparedQuery;
+import org.apache.nifi.attribute.expression.language.Query;
+import org.apache.nifi.attribute.expression.language.exception.AttributeExpressionLanguageParsingException;
 import org.apache.nifi.connectable.Connection;
 import org.apache.nifi.controller.queue.DropFlowFileState;
 import org.apache.nifi.controller.queue.DropFlowFileStatus;
 import org.apache.nifi.controller.queue.FlowFileQueue;
+import org.apache.nifi.controller.queue.FlowFileSummary;
 import org.apache.nifi.controller.queue.ListFlowFileRequest;
+import org.apache.nifi.controller.queue.ListFlowFileState;
 import org.apache.nifi.controller.queue.ListFlowFileStatus;
 import org.apache.nifi.controller.queue.QueueSize;
 import org.apache.nifi.controller.queue.SortColumn;
@@ -53,8 +58,10 @@ import org.apache.nifi.controller.repository.claim.ContentClaim;
 import org.apache.nifi.controller.repository.claim.ResourceClaim;
 import org.apache.nifi.controller.repository.claim.ResourceClaimManager;
 import org.apache.nifi.events.EventReporter;
+import org.apache.nifi.expression.AttributeExpression.ResultType;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
+import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.DataUnit;
 import org.apache.nifi.processor.FlowFileFilter;
 import org.apache.nifi.processor.FlowFileFilter.FlowFileFilterResult;
@@ -100,7 +107,6 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
     private final int swapThreshold;
     private final FlowFileSwapManager swapManager;
     private final List<String> swapLocations = new ArrayList<>();
-    @SuppressWarnings("unused")
     private final TimedLock readLock;
     private final TimedLock writeLock;
     private final String identifier;
@@ -841,15 +847,193 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
 
 
     @Override
-    public ListFlowFileStatus listFlowFiles(final String requestIdentifier) {
-        return listFlowFiles(requestIdentifier, SortColumn.QUEUE_POSITION, SortDirection.ASCENDING);
+    public ListFlowFileStatus listFlowFiles(final String requestIdentifier, final int maxResults) {
+        return listFlowFiles(requestIdentifier, maxResults, SortColumn.QUEUE_POSITION, SortDirection.ASCENDING);
     }
 
     @Override
-    public ListFlowFileStatus listFlowFiles(final String requestIdentifier, final SortColumn sortColumn, final SortDirection direction) {
-        // TODO: Implement
-        return null;
+    public ListFlowFileStatus listFlowFiles(final String requestIdentifier, final int maxResults, final SortColumn sortColumn, final SortDirection direction) {
+        return listFlowFiles(requestIdentifier, maxResults, null, sortColumn, direction);
     }
+
+    @Override
+    public ListFlowFileStatus listFlowFiles(final String requestIdentifier, final int maxResults, final String query, final SortColumn sortColumn, final SortDirection direction) {
+        final PreparedQuery preparedQuery;
+        if (query == null) {
+            preparedQuery = null;
+        } else {
+            try {
+                final ResultType resultType = Query.compile(query).getResultType();
+                if (resultType != ResultType.BOOLEAN) {
+                    throw new IllegalArgumentException("Invalid expression Language provided to search the listing of FlowFiles. "
+                        + "The expression must return a 'Boolean' type but returns a " + resultType.name() + " type");
+                }
+                preparedQuery = Query.prepare(query);
+            } catch (final AttributeExpressionLanguageParsingException e) {
+                throw new IllegalArgumentException("Invalid Expression Language provided to search the listing of FlowFiles: " + query, e);
+            }
+        }
+
+        // purge any old requests from the map just to keep it clean. But if there are very requests, which is usually the case, then don't bother
+        if (listRequestMap.size() > 10) {
+            final List<String> toDrop = new ArrayList<>();
+            for (final Map.Entry<String, ListFlowFileRequest> entry : listRequestMap.entrySet()) {
+                final ListFlowFileRequest request = entry.getValue();
+                final boolean completed = request.getState() == ListFlowFileState.COMPLETE || request.getState() == ListFlowFileState.FAILURE;
+
+                if (completed && System.currentTimeMillis() - request.getLastUpdated() > TimeUnit.MINUTES.toMillis(5L)) {
+                    toDrop.add(entry.getKey());
+                }
+            }
+
+            for (final String requestId : toDrop) {
+                listRequestMap.remove(requestId);
+            }
+        }
+
+        final int numSteps;
+        readLock.lock();
+        try {
+            numSteps = 1 + swapLocations.size();
+        } finally {
+            readLock.unlock("listFlowFiles");
+        }
+
+        final ListFlowFileRequest listRequest = new ListFlowFileRequest(requestIdentifier, sortColumn, direction, size(), numSteps);
+
+        final Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int position = 0;
+                int resultCount = 0;
+                final List<FlowFileSummary> summaries = new ArrayList<>(activeQueue.size());
+
+                // we need a write lock while using the Active Queue because we can't iterate over it - we have to poll from it
+                // continually. This is because the iterator for PriorityQueue does not iterate over the elements in any particular
+                // order. Since we need the 'position' of the element in the queue, we need to iterate over them in the proper order.
+                writeLock.lock();
+                try {
+                    final List<FlowFileRecord> flowFileRecords = new ArrayList<>(activeQueue.size());
+
+                    FlowFileRecord flowFile;
+                    try {
+                        while ((flowFile = activeQueue.poll()) != null) {
+                            flowFileRecords.add(flowFile);
+                            position++;
+
+                            if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
+                                summaries.add(summarize(flowFile, position));
+                                if (++resultCount >= maxResults) {
+                                    break;
+                                }
+                            }
+                        }
+                    } finally {
+                        activeQueue.addAll(flowFileRecords);
+                    }
+                } finally {
+                    writeLock.unlock("List FlowFiles");
+                }
+
+                position = activeQueue.size();
+                sourceLoop: while (resultCount < maxResults) {
+                    try {
+                        // We are now iterating over swap files, and we don't need the write lock for this, just the read lock, since
+                        // we are not modifying anything.
+                        readLock.lock();
+                        try {
+                            for (final String location : swapLocations) {
+                                final List<FlowFileRecord> flowFiles = swapManager.peek(location, StandardFlowFileQueue.this);
+                                for (final FlowFileRecord flowFile : flowFiles) {
+                                    position++;
+
+                                    if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
+                                        summaries.add(summarize(flowFile, position));
+                                        if (++resultCount >= maxResults) {
+                                            break sourceLoop;
+                                        }
+                                    }
+                                }
+                            }
+
+                            for (final FlowFileRecord flowFile : swapQueue) {
+                                position++;
+
+                                if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
+                                    summaries.add(summarize(flowFile, position));
+                                    if (++resultCount >= maxResults) {
+                                        break sourceLoop;
+                                    }
+                                }
+                            }
+                        } finally {
+                            readLock.unlock("List FlowFiles");
+                        }
+                    } catch (final IOException ioe) {
+                        logger.error("Failed to read swapped FlowFiles in order to perform listing of queue " + StandardFlowFileQueue.this, ioe);
+                        listRequest.setFailure("Could not read FlowFiles from queue. Check log files for more details.");
+                    }
+                }
+            }
+        }, "List FlowFiles for Connection " + getIdentifier());
+        t.setDaemon(true);
+        t.start();
+
+        listRequestMap.put(requestIdentifier, listRequest);
+        return listRequest;
+    }
+
+    private FlowFileSummary summarize(final FlowFile flowFile, final int position) {
+        // extract all of the information that we care about into new variables rather than just
+        // wrapping the FlowFile object with a FlowFileSummary object. We do this because we want to
+        // be able to hold many FlowFileSummary objects in memory and if we just wrap the FlowFile object,
+        // we will end up holding the entire FlowFile (including all Attributes) in the Java heap as well,
+        // which can be problematic if we expect them to be swapped out.
+        final String uuid = flowFile.getAttribute(CoreAttributes.UUID.key());
+        final String filename = flowFile.getAttribute(CoreAttributes.FILENAME.key());
+        final long size = flowFile.getSize();
+        final long lastQueuedTime = flowFile.getLastQueueDate();
+        final long lineageStart = flowFile.getLineageStartDate();
+        final boolean penalized = flowFile.isPenalized();
+
+        return new FlowFileSummary() {
+            @Override
+            public String getUuid() {
+                return uuid;
+            }
+
+            @Override
+            public String getFilename() {
+                return filename;
+            }
+
+            @Override
+            public int getPosition() {
+                return position;
+            }
+
+            @Override
+            public long getSize() {
+                return size;
+            }
+
+            @Override
+            public long lastQueuedTime() {
+                return lastQueuedTime;
+            }
+
+            @Override
+            public long getLineageStartDate() {
+                return lineageStart;
+            }
+
+            @Override
+            public boolean isPenalized() {
+                return penalized;
+            }
+        };
+    }
+
 
     @Override
     public ListFlowFileStatus getListFlowFileStatus(final String requestIdentifier) {
@@ -858,6 +1042,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
 
     @Override
     public ListFlowFileStatus cancelListFlowFileRequest(final String requestIdentifier) {
+        logger.info("Canceling ListFlowFile Request with ID {}", requestIdentifier);
         final ListFlowFileRequest request = listRequestMap.remove(requestIdentifier);
         if (request != null) {
             request.cancel();
@@ -867,8 +1052,41 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
     }
 
     @Override
-    public FlowFileRecord getFlowFile(String flowFileUuid) {
-        // TODO: Implement
+    public FlowFileRecord getFlowFile(final String flowFileUuid) throws IOException {
+        if (flowFileUuid == null) {
+            return null;
+        }
+
+        readLock.lock();
+        try {
+            // read through all of the FlowFiles in the queue, looking for the FlowFile with the given ID
+            for (final FlowFileRecord flowFile : activeQueue) {
+                if (flowFileUuid.equals(flowFile.getAttribute(CoreAttributes.UUID.key()))) {
+                    return flowFile;
+                }
+            }
+
+            for (final FlowFileRecord flowFile : swapQueue) {
+                if (flowFileUuid.equals(flowFile.getAttribute(CoreAttributes.UUID.key()))) {
+                    return flowFile;
+                }
+            }
+
+            // TODO: consider using a Long flowFileId instead of a UUID, and then having the swap manager
+            // write out the min and max FlowFile ID's. This would allow us to then have a method: boolean isFlowFilePossiblyContained(long id)
+            // which can return a boolean value that can be used to determine whether or not to even call peek
+            for (final String swapLocation : swapLocations) {
+                final List<FlowFileRecord> flowFiles = swapManager.peek(swapLocation, this);
+                for (final FlowFileRecord flowFile : flowFiles) {
+                    if (flowFileUuid.equals(flowFile.getAttribute(CoreAttributes.UUID.key()))) {
+                        return flowFile;
+                    }
+                }
+            }
+        } finally {
+            readLock.unlock("getFlowFile");
+        }
+
         return null;
     }
 

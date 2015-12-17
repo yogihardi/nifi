@@ -17,63 +17,93 @@
 
 package org.apache.nifi.controller.queue;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ListFlowFileRequest implements ListFlowFileStatus {
+    private final String requestId;
+    private final QueueSize queueSize;
+    private final SortColumn sortColumn;
+    private final SortDirection sortDirection;
+    private final long submissionTime = System.currentTimeMillis();
+    private final List<FlowFileSummary> flowFileSummaries = new ArrayList<>();
+
     private ListFlowFileState state;
+    private String failureReason;
+    private int numSteps;
+    private int numCompletedSteps;
+    private long lastUpdated = System.currentTimeMillis();
+
+    public ListFlowFileRequest(final String requestId, final SortColumn sortColumn, final SortDirection sortDirection, final QueueSize queueSize, final int numSteps) {
+        this.requestId = requestId;
+        this.sortColumn = sortColumn;
+        this.sortDirection = sortDirection;
+        this.queueSize = queueSize;
+        this.numSteps = numSteps;
+    }
 
     @Override
     public String getRequestIdentifier() {
-        // TODO Auto-generated method stub
-        return null;
+        return requestId;
     }
 
     @Override
     public long getRequestSubmissionTime() {
-        // TODO Auto-generated method stub
-        return 0;
+        return submissionTime;
     }
 
     @Override
-    public long getLastUpdated() {
-        // TODO Auto-generated method stub
-        return 0;
+    public synchronized long getLastUpdated() {
+        return lastUpdated;
     }
 
     @Override
     public SortColumn getSortColumn() {
-        // TODO Auto-generated method stub
-        return null;
+        return sortColumn;
     }
 
     @Override
     public SortDirection getSortDirection() {
-        // TODO Auto-generated method stub
-        return null;
+        return sortDirection;
     }
 
     @Override
-    public ListFlowFileState getState() {
-        // TODO Auto-generated method stub
-        return null;
+    public synchronized ListFlowFileState getState() {
+        return state;
     }
 
     @Override
-    public String getFailureReason() {
-        // TODO Auto-generated method stub
-        return null;
+    public synchronized String getFailureReason() {
+        return failureReason;
+    }
+
+    public synchronized void setState(final ListFlowFileState state) {
+        this.state = state;
+        this.lastUpdated = System.currentTimeMillis();
+    }
+
+    public synchronized void setFailure(final String explanation) {
+        this.state = ListFlowFileState.FAILURE;
+        this.failureReason = explanation;
+        this.lastUpdated = System.currentTimeMillis();
     }
 
     @Override
-    public List<FlowFileSummary> getFlowFileSummaries() {
-        // TODO Auto-generated method stub
-        return null;
+    public synchronized List<FlowFileSummary> getFlowFileSummaries() {
+        return Collections.unmodifiableList(flowFileSummaries);
+    }
+
+    public synchronized void addFlowFileSummaries(final List<FlowFileSummary> summaries) {
+        // TODO: Implement.
+
+        lastUpdated = System.currentTimeMillis();
+        this.numCompletedSteps++;
     }
 
     @Override
     public QueueSize getQueueSize() {
-        // TODO Auto-generated method stub
-        return null;
+        return queueSize;
     }
 
     public synchronized boolean cancel() {
@@ -83,5 +113,10 @@ public class ListFlowFileRequest implements ListFlowFileStatus {
 
         this.state = ListFlowFileState.CANCELED;
         return true;
+    }
+
+    @Override
+    public synchronized int getCompletionPercentage() {
+        return (int) (100F * numCompletedSteps / numSteps);
     }
 }

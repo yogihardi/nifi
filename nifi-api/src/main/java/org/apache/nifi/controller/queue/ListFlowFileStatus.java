@@ -67,4 +67,9 @@ public interface ListFlowFileStatus {
      * @return a List of FlowFileSummary objects
      */
     List<FlowFileSummary> getFlowFileSummaries();
+
+    /**
+     * @return the percentage (an integer between 0 and 100, inclusive) of how close the request is to being completed
+     */
+    int getCompletionPercentage();
 }
