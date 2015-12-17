@@ -121,6 +121,14 @@ public interface ConnectionDAO {
     ListFlowFileStatus createFlowFileListingRequest(String groupId, String id, String listingRequestId);
 
     /**
+     * Verifies the listing can be processed.
+     *
+     * @param groupId group id
+     * @param id connection id
+     */
+    void verifyList(String groupId, String id);
+
+    /**
      * Verifies the create request can be processed.
      *
      * @param groupId group id

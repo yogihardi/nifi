@@ -496,6 +496,14 @@ public interface NiFiServiceFacade {
     ConfigurationSnapshot<ConnectionDTO> createConnection(Revision revision, String groupId, ConnectionDTO connectionDTO);
 
     /**
+     * Determines if this connection can be listed.
+     *
+     * @param groupId group
+     * @param connectionId connection
+     */
+    void verifyListQueue(String groupId, String connectionId);
+
+    /**
      * Determines if this connection can be created.
      *
      * @param groupId group

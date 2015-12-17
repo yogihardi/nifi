@@ -219,6 +219,12 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     // -----------------------------------------
     // Verification Operations
     // -----------------------------------------
+
+    @Override
+    public void verifyListQueue(String groupId, String connectionId) {
+        connectionDAO.verifyList(groupId, connectionId);
+    }
+
     @Override
     public void verifyCreateConnection(String groupId, ConnectionDTO connectionDTO) {
         connectionDAO.verifyCreate(groupId, connectionDTO);

@@ -1031,6 +1031,7 @@ public class ConnectionResource extends ApplicationResource {
     @Path("/{connection-id}/flowfiles/{flowfile-uuid}")
     @PreAuthorize("hasRole('ROLE_DFM')")
     public Response deleteFlowFile(
+            @Context HttpServletRequest httpServletRequest,
             @ApiParam(
                 value = "If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response.",
                 required = false
@@ -1070,6 +1071,12 @@ public class ConnectionResource extends ApplicationResource {
                 // replicate the request to the specific node
                 return clusterManager.applyRequest(HttpMethod.DELETE, getAbsolutePath(), getRequestParameters(true), getHeaders(), targetNodes).getResponse();
             }
+        }
+
+        // handle expects request (usually from the cluster manager)
+        final String expects = httpServletRequest.getHeader(WebClusterManager.NCM_EXPECTS_HTTP_HEADER);
+        if (expects != null) {
+            return generateContinueResponse().build();
         }
 
         return null;
@@ -1255,7 +1262,7 @@ public class ConnectionResource extends ApplicationResource {
             @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
         }
     )
-    public Response getFlowFileListing(
+    public Response createFlowFileListing(
             @Context HttpServletRequest httpServletRequest,
             @ApiParam(
                 value = "If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response.",
@@ -1271,6 +1278,13 @@ public class ConnectionResource extends ApplicationResource {
         // replicate if cluster manager
         if (properties.isClusterManager()) {
             return clusterManager.applyRequest(HttpMethod.GET, getAbsolutePath(), getRequestParameters(true), getHeaders()).getResponse();
+        }
+
+        // handle expects request (usually from the cluster manager)
+        final String expects = httpServletRequest.getHeader(WebClusterManager.NCM_EXPECTS_HTTP_HEADER);
+        if (expects != null) {
+            serviceFacade.verifyListQueue(groupId, id);
+            return generateContinueResponse().build();
         }
 
         // ensure the id is the same across the cluster

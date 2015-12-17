@@ -391,6 +391,13 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
     }
 
     @Override
+    public void verifyList(String groupId, String id) {
+        final Connection connection = locateConnection(groupId, id);
+        final FlowFileQueue queue = connection.getFlowFileQueue();
+        queue.verifyCanList();
+    }
+
+    @Override
     public void verifyUpdate(String groupId, ConnectionDTO connectionDTO) {
         final ProcessGroup group = locateProcessGroup(flowController, groupId);
         verifyUpdate(locateConnection(group, connectionDTO.getId()), connectionDTO);
