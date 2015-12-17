@@ -2856,7 +2856,8 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
         ListFlowFileState state = null;
         int sumOfPercents = 0;
         boolean finished = true;
-        for (final ListingRequestDTO nodeRequest : listingRequestMap.values()) {
+        for (final Map.Entry<NodeIdentifier, ListingRequestDTO> entry : listingRequestMap.entrySet()) {
+            final ListingRequestDTO nodeRequest = entry.getValue();
             Integer percentComplete = nodeRequest.getPercentCompleted();
             if (percentComplete != null) {
                 sumOfPercents += percentComplete;
@@ -2877,6 +2878,7 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
             }
 
             for (final FlowFileSummaryDTO summaryDTO : nodeRequest.getFlowFileSummaries()) {
+                summaryDTO.setClusterNodeId(entry.getKey().getId());
                 flowFileSummaries.add(summaryDTO);
 
                 // Keep the set from growing beyond our max
