@@ -24,6 +24,8 @@ import java.util.Date;
 
 public class FlowFileSummaryDTO {
 
+    private String uri;
+
     private String uuid;
     private String filename;
     private Integer position;
@@ -31,6 +33,22 @@ public class FlowFileSummaryDTO {
     private Date lastQueuedTime;
     private Date linageStartDate;
     private Boolean isPenalized;
+
+    private String clusterNodeId;
+
+    /**
+     * @return the FlowFile uri
+     */
+    @ApiModelProperty(
+        value = "The URI that can be used to access this FlowFile."
+    )
+    public String getUri() {
+        return uri;
+    }
+
+    public void setUri(String uri) {
+        this.uri = uri;
+    }
 
     /**
      * @return the FlowFile uuid
@@ -130,5 +148,19 @@ public class FlowFileSummaryDTO {
 
     public void setPenalized(Boolean penalized) {
         isPenalized = penalized;
+    }
+
+    /**
+     * @return The id of the node where this FlowFile resides.
+     */
+    @ApiModelProperty(
+        value = "The id of the node where this FlowFile resides."
+    )
+    public String getClusterNodeId() {
+        return clusterNodeId;
+    }
+
+    public void setClusterNodeId(String clusterNodeId) {
+        this.clusterNodeId = clusterNodeId;
     }
 }

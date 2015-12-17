@@ -20,6 +20,8 @@ import java.util.Set;
 import org.apache.nifi.connectable.Connection;
 import org.apache.nifi.controller.queue.DropFlowFileStatus;
 import org.apache.nifi.controller.queue.ListFlowFileStatus;
+import org.apache.nifi.controller.repository.FlowFileRecord;
+import org.apache.nifi.web.DownloadableContent;
 import org.apache.nifi.web.api.dto.ConnectionDTO;
 
 public interface ConnectionDAO {
@@ -44,7 +46,7 @@ public interface ConnectionDAO {
     DropFlowFileStatus getFlowFileDropRequest(String groupId, String id, String dropRequestId);
 
     /**
-     * Gets the specified flow file listing request.
+     * Gets the specified flowfile listing request.
      *
      * @param groupId group id
      * @param id connection id
@@ -52,6 +54,16 @@ public interface ConnectionDAO {
      * @return The listing request status
      */
     ListFlowFileStatus getFlowFileListingRequest(String groupId, String id, String listingRequestId);
+
+    /**
+     * Gets the specified flowfile in the specified connection.
+     *
+     * @param groupId group id
+     * @param id connection id
+     * @param flowFileUuid the flowfile uuid
+     * @return The flowfile
+     */
+    FlowFileRecord getFlowFile(String groupId, String id, String flowFileUuid);
 
     /**
      * Gets the connections for the specified source processor.
@@ -168,4 +180,15 @@ public interface ConnectionDAO {
      * @return The listing request status
      */
     ListFlowFileStatus deleteFlowFileListingRequest(String groupId, String id, String listingRequestId);
+
+    /**
+     * Gets the content for the specified flowfile in the specified connection.
+     *
+     * @param groupId group id
+     * @param id connection id
+     * @param flowfileUuid flowfile uuid
+     * @param requestUri request uri
+     * @return The downloadable content
+     */
+    DownloadableContent getContent(String groupId, String id, String flowfileUuid, String requestUri);
 }

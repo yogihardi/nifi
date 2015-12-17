@@ -80,6 +80,7 @@ import org.apache.nifi.remote.RootGroupPort;
 import org.apache.nifi.reporting.Bulletin;
 import org.apache.nifi.reporting.BulletinQuery;
 import org.apache.nifi.reporting.BulletinRepository;
+import org.apache.nifi.web.api.dto.FlowFileDTO;
 import org.apache.nifi.web.api.dto.ListingRequestDTO;
 import org.apache.nifi.web.security.user.NiFiUserUtils;
 import org.apache.nifi.user.AccountStatus;
@@ -1960,6 +1961,11 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     }
 
     @Override
+    public DownloadableContent getContent(String groupId, String connectionId, String flowFileUuid, String uri) {
+        return connectionDAO.getContent(groupId, connectionId, flowFileUuid, uri);
+    }
+
+    @Override
     public DownloadableContent getContent(Long eventId, String uri, ContentDirection contentDirection) {
         return controllerFacade.getContent(eventId, uri, contentDirection);
     }
@@ -2140,6 +2146,11 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     @Override
     public ListingRequestDTO getFlowFileListingRequest(String groupId, String connectionId, String listingRequestId) {
         return dtoFactory.createListingRequestDTO(connectionDAO.getFlowFileListingRequest(groupId, connectionId, listingRequestId));
+    }
+
+    @Override
+    public FlowFileDTO getFlowFile(String groupId, String connectionId, String flowFileUuid) {
+        return dtoFactory.createFlowFileDTO(connectionDAO.getFlowFile(groupId, connectionId, flowFileUuid));
     }
 
     @Override

@@ -78,6 +78,7 @@ import org.apache.nifi.controller.label.Label;
 import org.apache.nifi.controller.queue.FlowFileSummary;
 import org.apache.nifi.controller.queue.ListFlowFileState;
 import org.apache.nifi.controller.queue.ListFlowFileStatus;
+import org.apache.nifi.controller.repository.FlowFileRecord;
 import org.apache.nifi.controller.status.ConnectionStatus;
 import org.apache.nifi.controller.status.PortStatus;
 import org.apache.nifi.controller.status.ProcessGroupStatus;
@@ -87,6 +88,7 @@ import org.apache.nifi.diagnostics.GarbageCollection;
 import org.apache.nifi.diagnostics.StorageUsage;
 import org.apache.nifi.diagnostics.SystemDiagnostics;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
+import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.groups.ProcessGroupCounts;
 import org.apache.nifi.groups.RemoteProcessGroup;
@@ -390,6 +392,18 @@ public final class DtoFactory {
         dto.setPenalized(summary.isPenalized());
         dto.setPosition(summary.getPosition());
         dto.setSize(summary.getSize());
+        return dto;
+    }
+
+    public FlowFileDTO createFlowFileDTO(final FlowFileRecord record) {
+        final FlowFileDTO dto = new FlowFileDTO();
+        dto.setUuid(record.getAttribute(CoreAttributes.UUID.key()));
+        dto.setFilename(record.getAttribute(CoreAttributes.FILENAME.key()));
+        dto.setLastQueuedTime(new Date(record.getLastQueueDate()));
+        dto.setLinageStartDate(new Date(record.getLineageStartDate()));
+        dto.setPenalized(record.isPenalized());
+        dto.setSize(record.getSize());
+        dto.setAttributes(record.getAttributes());
         return dto;
     }
 
