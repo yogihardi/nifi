@@ -58,14 +58,15 @@ import org.apache.nifi.web.ConfigurationSnapshot;
 import org.apache.nifi.web.IllegalClusterResourceRequestException;
 import org.apache.nifi.web.NiFiServiceFacade;
 import org.apache.nifi.web.Revision;
-import static org.apache.nifi.web.api.ApplicationResource.CLIENT_ID;
 import org.apache.nifi.web.api.dto.ConnectableDTO;
 import org.apache.nifi.web.api.dto.ConnectionDTO;
+import org.apache.nifi.web.api.dto.ListingRequestDTO;
 import org.apache.nifi.web.api.dto.PositionDTO;
 import org.apache.nifi.web.api.dto.RevisionDTO;
 import org.apache.nifi.web.api.dto.status.StatusHistoryDTO;
 import org.apache.nifi.web.api.entity.ConnectionEntity;
 import org.apache.nifi.web.api.entity.ConnectionsEntity;
+import org.apache.nifi.web.api.entity.ListingRequestEntity;
 import org.apache.nifi.web.api.entity.StatusHistoryEntity;
 import org.apache.nifi.web.api.request.ClientIdParameter;
 import org.apache.nifi.web.api.request.ConnectableTypeParameter;
@@ -839,7 +840,7 @@ public class ConnectionResource extends ApplicationResource {
                 @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
             }
     )
-    public Response deleteRelationshipTarget(
+    public Response deleteConnection(
             @Context HttpServletRequest httpServletRequest,
             @ApiParam(
                     value = "The revision is used to verify the client is working with the latest version of the flow.",
@@ -891,8 +892,25 @@ public class ConnectionResource extends ApplicationResource {
         return clusterContext(generateOkResponse(entity)).build();
     }
 
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    @Path("/{connection-id}/flowfiles/{flow-file-uuid}")
+    public Response getFlowFile() {
+        return null;
+    }
+
+    @DELETE
+    @Consumes(MediaType.WILDCARD)
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    @Path("/{connection-id}/flowfiles/{flow-file-uuid}")
+    public Response deleteFlowFile() {
+        return null;
+    }
+
     /**
-     * Drops the flowfiles in the queue of the specified connection.
+     * Drops the flowfiles in the queue of the specified connection. This endpoint is DEPRECATED. Please use
+     * POST /nifi-api/controller/process-groups/{process-group-id}/connections/{connection-id}/drop-requests instead.
      *
      * @param httpServletRequest request
      * @param clientId Optional client id. If the client id is not specified, a new one will be generated. This value (whether specified or generated) is included in the response.
@@ -906,6 +924,7 @@ public class ConnectionResource extends ApplicationResource {
     @PreAuthorize("hasRole('ROLE_DFM')")
     @ApiOperation(
             value = "Drops the contents of the queue in this connection.",
+            notes = "This endpoint is DEPRECATED. Please use POST /nifi-api/controller/process-groups/{process-group-id}/connections/{connection-id}/drop-requests instead.",
             response = DropRequestEntity.class,
             authorizations = {
                 @Authorization(value = "Data Flow Manager", type = "ROLE_DFM")
@@ -913,6 +932,7 @@ public class ConnectionResource extends ApplicationResource {
     )
     @ApiResponses(
             value = {
+                @ApiResponse(code = 202, message = "The request has been accepted. A HTTP response header will contain the URI where the response can be polled."),
                 @ApiResponse(code = 400, message = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
                 @ApiResponse(code = 401, message = "Client could not be authenticated."),
                 @ApiResponse(code = 403, message = "Client is not authorized to make this request."),
@@ -920,6 +940,7 @@ public class ConnectionResource extends ApplicationResource {
                 @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
             }
     )
+    @Deprecated
     public Response dropQueueContents(
             @Context HttpServletRequest httpServletRequest,
             @ApiParam(
@@ -932,6 +953,272 @@ public class ConnectionResource extends ApplicationResource {
                     required = true
             )
             @PathParam("connection-id") String id) {
+
+        // defer to the new endpoint that references /drop-requests in the URI
+        return createDropRequest(httpServletRequest, clientId, id);
+    }
+
+    /**
+     * Creates a request to list the flowfiles in the queue of the specified connection.
+     *
+     * @param httpServletRequest request
+     * @param clientId Optional client id. If the client id is not specified, a new one will be generated. This value (whether specified or generated) is included in the response.
+     * @param id The id of the connection
+     * @return A listRequestEntity
+     */
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    @Path("/{connection-id}/listing-requests")
+    @PreAuthorize("hasRole('ROLE_DFM')")
+    @ApiOperation(
+        value = "Lists the contents of the queue in this connection.",
+        response = ListingRequestEntity.class,
+        authorizations = {
+            @Authorization(value = "Data Flow Manager", type = "ROLE_DFM")
+        }
+    )
+    @ApiResponses(
+        value = {
+            @ApiResponse(code = 202, message = "The request has been accepted. A HTTP response header will contain the URI where the response can be polled."),
+            @ApiResponse(code = 400, message = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
+            @ApiResponse(code = 401, message = "Client could not be authenticated."),
+            @ApiResponse(code = 403, message = "Client is not authorized to make this request."),
+            @ApiResponse(code = 404, message = "The specified resource could not be found."),
+            @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
+        }
+    )
+    public Response getFlowFileListing(
+            @Context HttpServletRequest httpServletRequest,
+            @ApiParam(
+                value = "If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response.",
+                required = false
+            )
+            @QueryParam(CLIENT_ID) @DefaultValue(StringUtils.EMPTY) ClientIdParameter clientId,
+            @ApiParam(
+                value = "The connection id.",
+                required = true
+            )
+            @PathParam("connection-id") String id) {
+
+        // replicate if cluster manager
+        if (properties.isClusterManager()) {
+            return clusterManager.applyRequest(HttpMethod.GET, getAbsolutePath(), getRequestParameters(true), getHeaders()).getResponse();
+        }
+
+        // ensure the id is the same across the cluster
+        final String listingRequestId;
+        final ClusterContext clusterContext = ClusterContextThreadLocal.getContext();
+        if (clusterContext != null) {
+            listingRequestId = UUID.nameUUIDFromBytes(clusterContext.getIdGenerationSeed().getBytes(StandardCharsets.UTF_8)).toString();
+        } else {
+            listingRequestId = UUID.randomUUID().toString();
+        }
+
+        // submit the listing request
+        final ListingRequestDTO listRequest = serviceFacade.createFlowFileListingRequest(groupId, id, listingRequestId);
+        listRequest.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", id, "listing-requests", listRequest.getId()));
+
+        // create the revision
+        final RevisionDTO revision = new RevisionDTO();
+        revision.setClientId(clientId.getClientId());
+
+        // create the response entity
+        final ListingRequestEntity entity = new ListingRequestEntity();
+        entity.setRevision(revision);
+        entity.setListingRequest(listRequest);
+
+        // generate the URI where the response will be
+        final URI location = URI.create(listRequest.getUri());
+        return Response.status(Status.ACCEPTED).location(location).entity(entity).build();
+    }
+
+    /**
+     * Checks the status of an outstanding listing request.
+     *
+     * @param clientId Optional client id. If the client id is not specified, a new one will be generated. This value (whether specified or generated) is included in the response.
+     * @param connectionId The id of the connection
+     * @param listingRequestId The id of the drop request
+     * @return A dropRequestEntity
+     */
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    @Path("/{connection-id}/listing-requests/{listing-request-id}")
+    @PreAuthorize("hasRole('ROLE_DFM')")
+    @ApiOperation(
+        value = "Gets the current status of a listing request for the specified connection.",
+        response = ListingRequestEntity.class,
+        authorizations = {
+            @Authorization(value = "Data Flow Manager", type = "ROLE_DFM")
+        }
+    )
+    @ApiResponses(
+        value = {
+            @ApiResponse(code = 400, message = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
+            @ApiResponse(code = 401, message = "Client could not be authenticated."),
+            @ApiResponse(code = 403, message = "Client is not authorized to make this request."),
+            @ApiResponse(code = 404, message = "The specified resource could not be found."),
+            @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
+        }
+    )
+    public Response getListingRequest(
+            @ApiParam(
+                value = "If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response.",
+                required = false
+            )
+            @QueryParam(CLIENT_ID) @DefaultValue(StringUtils.EMPTY) ClientIdParameter clientId,
+            @ApiParam(
+                value = "The connection id.",
+                required = true
+            )
+            @PathParam("connection-id") String connectionId,
+            @ApiParam(
+                value = "The listing request id.",
+                required = true
+            )
+            @PathParam("listing-request-id") String listingRequestId) {
+
+        // replicate if cluster manager
+        if (properties.isClusterManager()) {
+            return clusterManager.applyRequest(HttpMethod.GET, getAbsolutePath(), getRequestParameters(true), getHeaders()).getResponse();
+        }
+
+        // get the listing request
+        final ListingRequestDTO listingRequest = serviceFacade.getFlowFileListingRequest(groupId, connectionId, listingRequestId);
+        listingRequest.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", connectionId, "listing-requests", listingRequestId));
+
+        // create the revision
+        final RevisionDTO revision = new RevisionDTO();
+        revision.setClientId(clientId.getClientId());
+
+        // create the response entity
+        final ListingRequestEntity entity = new ListingRequestEntity();
+        entity.setRevision(revision);
+        entity.setListingRequest(listingRequest);
+
+        return generateOkResponse(entity).build();
+    }
+
+    /**
+     * Deletes the specified listing request.
+     *
+     * @param httpServletRequest request
+     * @param clientId Optional client id. If the client id is not specified, a new one will be generated. This value (whether specified or generated) is included in the response.
+     * @param connectionId The connection id
+     * @param listingRequestId The drop request id
+     * @return A dropRequestEntity
+     */
+    @DELETE
+    @Consumes(MediaType.WILDCARD)
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    @Path("/{connection-id}/listing-requests/{listing-request-id}")
+    @ApiOperation(
+        value = "Cancels and/or removes a request to list the contents of this connection.",
+        response = DropRequestEntity.class,
+        authorizations = {
+            @Authorization(value = "Data Flow Manager", type = "ROLE_DFM")
+        }
+    )
+    @ApiResponses(
+        value = {
+            @ApiResponse(code = 400, message = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
+            @ApiResponse(code = 401, message = "Client could not be authenticated."),
+            @ApiResponse(code = 403, message = "Client is not authorized to make this request."),
+            @ApiResponse(code = 404, message = "The specified resource could not be found."),
+            @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
+        }
+    )
+    public Response deleteListingRequest(
+            @Context HttpServletRequest httpServletRequest,
+            @ApiParam(
+                value = "If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response.",
+                required = false
+            )
+            @QueryParam(CLIENT_ID) @DefaultValue(StringUtils.EMPTY) ClientIdParameter clientId,
+            @ApiParam(
+                value = "The connection id.",
+                required = true
+            )
+            @PathParam("connection-id") String connectionId,
+            @ApiParam(
+                value = "The listing request id.",
+                required = true
+            )
+            @PathParam("listing-request-id") String listingRequestId) {
+
+        // replicate if cluster manager
+        if (properties.isClusterManager()) {
+            return clusterManager.applyRequest(HttpMethod.DELETE, getAbsolutePath(), getRequestParameters(true), getHeaders()).getResponse();
+        }
+
+        // handle expects request (usually from the cluster manager)
+        final String expects = httpServletRequest.getHeader(WebClusterManager.NCM_EXPECTS_HTTP_HEADER);
+        if (expects != null) {
+            return generateContinueResponse().build();
+        }
+
+        // delete the listing request
+        final ListingRequestDTO dropRequest = serviceFacade.deleteFlowFileListingRequest(groupId, connectionId, listingRequestId);
+        dropRequest.setUri(generateResourceUri("controller", "process-groups", groupId, "connections", connectionId, "listing-requests", listingRequestId));
+
+        // prune the results as they were already received when the listing completed
+        dropRequest.setFlowFileSummaries(null);
+
+        // create the revision
+        final RevisionDTO revision = new RevisionDTO();
+        revision.setClientId(clientId.getClientId());
+
+        // create the response entity
+        final ListingRequestEntity entity = new ListingRequestEntity();
+        entity.setRevision(revision);
+        entity.setListingRequest(dropRequest);
+
+        return generateOkResponse(entity).build();
+    }
+
+    /**
+     * Creates a request to delete the flowfiles in the queue of the specified connection.
+     *
+     * @param httpServletRequest request
+     * @param clientId Optional client id. If the client id is not specified, a new one will be generated. This value (whether specified or generated) is included in the response.
+     * @param id The id of the connection
+     * @return A dropRequestEntity
+     */
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    @Path("/{connection-id}/drop-requests")
+    @PreAuthorize("hasRole('ROLE_DFM')")
+    @ApiOperation(
+        value = "Creates a request to drop the contents of the queue in this connection.",
+        response = DropRequestEntity.class,
+        authorizations = {
+            @Authorization(value = "Data Flow Manager", type = "ROLE_DFM")
+        }
+    )
+    @ApiResponses(
+        value = {
+            @ApiResponse(code = 202, message = "The request has been accepted. A HTTP response header will contain the URI where the response can be polled."),
+            @ApiResponse(code = 400, message = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
+            @ApiResponse(code = 401, message = "Client could not be authenticated."),
+            @ApiResponse(code = 403, message = "Client is not authorized to make this request."),
+            @ApiResponse(code = 404, message = "The specified resource could not be found."),
+            @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
+        }
+    )
+    public Response createDropRequest(
+        @Context HttpServletRequest httpServletRequest,
+        @ApiParam(
+            value = "If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response.",
+            required = false
+        )
+        @QueryParam(CLIENT_ID) @DefaultValue(StringUtils.EMPTY) ClientIdParameter clientId,
+        @ApiParam(
+            value = "The connection id.",
+            required = true
+        )
+        @PathParam("connection-id") String id) {
 
         // replicate if cluster manager
         if (properties.isClusterManager()) {
@@ -968,11 +1255,7 @@ public class ConnectionResource extends ApplicationResource {
 
         // generate the URI where the response will be
         final URI location = URI.create(dropRequest.getUri());
-        if (dropRequest.isFinished()) {
-            return generateCreatedResponse(location, entity).build();
-        } else {
-            return Response.status(Status.ACCEPTED).location(location).entity(entity).build();
-        }
+        return Response.status(Status.ACCEPTED).location(location).entity(entity).build();
     }
 
     /**
@@ -1057,7 +1340,7 @@ public class ConnectionResource extends ApplicationResource {
     @Path("/{connection-id}/drop-requests/{drop-request-id}")
     @PreAuthorize("hasRole('ROLE_DFM')")
     @ApiOperation(
-            value = "Cancels and/or removes a request drop of the contents in this connection.",
+            value = "Cancels and/or removes a request to drop the contents of this connection.",
             response = DropRequestEntity.class,
             authorizations = {
                 @Authorization(value = "Data Flow Manager", type = "ROLE_DFM")

@@ -75,6 +75,9 @@ import org.apache.nifi.controller.ProcessorNode;
 import org.apache.nifi.controller.Snippet;
 import org.apache.nifi.controller.Template;
 import org.apache.nifi.controller.label.Label;
+import org.apache.nifi.controller.queue.FlowFileSummary;
+import org.apache.nifi.controller.queue.ListFlowFileState;
+import org.apache.nifi.controller.queue.ListFlowFileStatus;
 import org.apache.nifi.controller.status.ConnectionStatus;
 import org.apache.nifi.controller.status.PortStatus;
 import org.apache.nifi.controller.status.ProcessGroupStatus;
@@ -342,6 +345,49 @@ public final class DtoFactory {
             dto.setPercentCompleted((dropped.getObjectCount() * 100) / original.getObjectCount());
         }
 
+        return dto;
+    }
+
+    private boolean isListingRequestComplete(final ListFlowFileState state) {
+        return ListFlowFileState.COMPLETE.equals(state) || ListFlowFileState.CANCELED.equals(state) || ListFlowFileState.FAILURE.equals(state);
+    }
+
+    public ListingRequestDTO createListingRequestDTO(final ListFlowFileStatus listingRequest) {
+        final ListingRequestDTO dto = new ListingRequestDTO();
+        dto.setId(listingRequest.getRequestIdentifier());
+        dto.setSubmissionTime(new Date(listingRequest.getRequestSubmissionTime()));
+        dto.setLastUpdated(new Date(listingRequest.getLastUpdated()));
+        dto.setState(listingRequest.getState().toString());
+        dto.setFailureReason(listingRequest.getFailureReason());
+        dto.setFinished(isListingRequestComplete(listingRequest.getState()));
+
+        if (isListingRequestComplete(listingRequest.getState())) {
+            dto.setPercentCompleted(100);
+
+            final List<FlowFileSummary> flowFileSummaries = listingRequest.getFlowFileSummaries();
+            if (flowFileSummaries != null) {
+                final List<FlowFileSummaryDTO> summaryDtos = new ArrayList<>(flowFileSummaries.size());
+                for (final FlowFileSummary summary : flowFileSummaries) {
+                    summaryDtos.add(createFlowFileSummaryDTO(summary));
+                }
+                dto.setFlowFileSummaries(summaryDtos);
+            }
+        } else {
+            dto.setPercentCompleted(50);
+        }
+
+        return dto;
+    }
+
+    public FlowFileSummaryDTO createFlowFileSummaryDTO(final FlowFileSummary summary) {
+        final FlowFileSummaryDTO dto = new FlowFileSummaryDTO();
+        dto.setUuid(summary.getUuid());
+        dto.setFilename(summary.getFilename());
+        dto.setLastQueuedTime(new Date(summary.lastQueuedTime()));
+        dto.setLinageStartDate(new Date(summary.getLineageStartDate()));
+        dto.setPenalized(summary.isPenalized());
+        dto.setPosition(summary.getPosition());
+        dto.setSize(summary.getSize());
         return dto;
     }
 

@@ -34,6 +34,7 @@ import org.apache.nifi.controller.ProcessorNode;
 import org.apache.nifi.controller.exception.ValidationException;
 import org.apache.nifi.controller.queue.DropFlowFileStatus;
 import org.apache.nifi.controller.queue.FlowFileQueue;
+import org.apache.nifi.controller.queue.ListFlowFileStatus;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.groups.RemoteProcessGroup;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
@@ -84,6 +85,19 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
         }
 
         return dropRequest;
+    }
+
+    @Override
+    public ListFlowFileStatus getFlowFileListingRequest(String groupId, String connectionId, String listingRequestId) {
+        final Connection connection = locateConnection(groupId, connectionId);
+        final FlowFileQueue queue = connection.getFlowFileQueue();
+
+        final ListFlowFileStatus listRequest = queue.getListFlowFileStatus(listingRequestId);
+        if (listRequest == null) {
+            throw new ResourceNotFoundException(String.format("Unable to find listing request with id '%s'.", listingRequestId));
+        }
+
+        return listRequest;
     }
 
     @Override
@@ -312,7 +326,7 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
     }
 
     @Override
-    public DropFlowFileStatus createFileFlowDropRequest(String groupId, String id, String dropRequestId) {
+    public DropFlowFileStatus createFlowFileDropRequest(String groupId, String id, String dropRequestId) {
         final Connection connection = locateConnection(groupId, id);
         final FlowFileQueue queue = connection.getFlowFileQueue();
 
@@ -322,6 +336,13 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
         }
 
         return queue.dropFlowFiles(dropRequestId, user.getIdentity());
+    }
+
+    @Override
+    public ListFlowFileStatus createFlowFileListingRequest(String groupId, String id, String listingRequestId) {
+        final Connection connection = locateConnection(groupId, id);
+        final FlowFileQueue queue = connection.getFlowFileQueue();
+        return queue.listFlowFiles(listingRequestId);
     }
 
     @Override
@@ -506,6 +527,19 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
         }
 
         return dropFlowFileStatus;
+    }
+
+    @Override
+    public ListFlowFileStatus deleteFlowFileListingRequest(String groupId, String connectionId, String listingRequestId) {
+        final Connection connection = locateConnection(groupId, connectionId);
+        final FlowFileQueue queue = connection.getFlowFileQueue();
+
+        final ListFlowFileStatus listFlowFileStatus = queue.cancelListFlowFileRequest(listingRequestId);
+        if (listFlowFileStatus == null) {
+            throw new ResourceNotFoundException(String.format("Unable to find listing request with id '%s'.", listingRequestId));
+        }
+
+        return listFlowFileStatus;
     }
 
     /* setters */
