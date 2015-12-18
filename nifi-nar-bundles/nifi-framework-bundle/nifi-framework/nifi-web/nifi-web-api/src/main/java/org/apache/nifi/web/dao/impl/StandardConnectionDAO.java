@@ -40,6 +40,8 @@ import org.apache.nifi.controller.exception.ValidationException;
 import org.apache.nifi.controller.queue.DropFlowFileStatus;
 import org.apache.nifi.controller.queue.FlowFileQueue;
 import org.apache.nifi.controller.queue.ListFlowFileStatus;
+import org.apache.nifi.controller.queue.SortColumn;
+import org.apache.nifi.controller.queue.SortDirection;
 import org.apache.nifi.controller.repository.ContentNotFoundException;
 import org.apache.nifi.controller.repository.FlowFileRecord;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
@@ -373,10 +375,10 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
     }
 
     @Override
-    public ListFlowFileStatus createFlowFileListingRequest(String groupId, String id, String listingRequestId) {
+    public ListFlowFileStatus createFlowFileListingRequest(String groupId, String id, String listingRequestId, SortColumn column, SortDirection direction) {
         final Connection connection = locateConnection(groupId, id);
         final FlowFileQueue queue = connection.getFlowFileQueue();
-        return queue.listFlowFiles(listingRequestId, 100);
+        return queue.listFlowFiles(listingRequestId, 100, column, direction);
     }
 
     @Override

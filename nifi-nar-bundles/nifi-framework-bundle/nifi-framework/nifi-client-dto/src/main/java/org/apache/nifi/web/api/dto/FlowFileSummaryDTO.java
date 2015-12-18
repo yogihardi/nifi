@@ -17,10 +17,6 @@
 package org.apache.nifi.web.api.dto;
 
 import com.wordnik.swagger.annotations.ApiModelProperty;
-import org.apache.nifi.web.api.dto.util.TimestampAdapter;
-
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import java.util.Date;
 
 public class FlowFileSummaryDTO {
 
@@ -30,8 +26,8 @@ public class FlowFileSummaryDTO {
     private String filename;
     private Integer position;
     private Long size;
-    private Date lastQueuedTime;
-    private Date linageStartDate;
+    private Long queuedDuration;
+    private Long lineageDuration;
     private Boolean isPenalized;
 
     private String clusterNodeId;
@@ -107,33 +103,31 @@ public class FlowFileSummaryDTO {
     }
 
     /**
-     * @return when the FlowFile was last added to the queue
+     * @return how long this FlowFile has been enqueued
      */
-    @XmlJavaTypeAdapter(TimestampAdapter.class)
     @ApiModelProperty(
-        value = "When the FlowFile was last added to the queue."
+        value = "How long this FlowFile has been enqueued."
     )
-    public Date getLastQueuedTime() {
-        return lastQueuedTime;
+    public Long getQueuedDuration() {
+        return queuedDuration;
     }
 
-    public void setLastQueuedTime(Date lastQueuedTime) {
-        this.lastQueuedTime = lastQueuedTime;
+    public void setQueuedDuration(Long queuedDuration) {
+        this.queuedDuration = queuedDuration;
     }
 
     /**
-     * @return when the FlowFile's greatest ancestor entered the flow
+     * @return duration since the FlowFile's greatest ancestor entered the flow
      */
-    @XmlJavaTypeAdapter(TimestampAdapter.class)
     @ApiModelProperty(
-        value = "When the FlowFile's greatest ancestor entered the flow."
+        value = "Duration since the FlowFile's greatest ancestor entered the flow."
     )
-    public Date getLinageStartDate() {
-        return linageStartDate;
+    public Long getLineageDuration() {
+        return lineageDuration;
     }
 
-    public void setLinageStartDate(Date linageStartDate) {
-        this.linageStartDate = linageStartDate;
+    public void setLineageDuration(Long lineageDuration) {
+        this.lineageDuration = lineageDuration;
     }
 
     /**

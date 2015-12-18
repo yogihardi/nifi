@@ -29,6 +29,8 @@ import org.apache.nifi.cluster.manager.exception.UnknownNodeException;
 import org.apache.nifi.cluster.manager.impl.WebClusterManager;
 import org.apache.nifi.cluster.node.Node;
 import org.apache.nifi.cluster.protocol.NodeIdentifier;
+import org.apache.nifi.controller.queue.SortColumn;
+import org.apache.nifi.controller.queue.SortDirection;
 import org.apache.nifi.stream.io.StreamUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.web.ConfigurationSnapshot;
@@ -1273,7 +1275,38 @@ public class ConnectionResource extends ApplicationResource {
                 value = "The connection id.",
                 required = true
             )
-            @PathParam("connection-id") String id) {
+            @PathParam("connection-id") String id,
+            @ApiParam(
+                value = "The sort column.",
+                required = false,
+                defaultValue = "QUEUE_POSITION",
+                allowableValues = "QUEUE_POSITION, FLOWFILE_UUID, FILENAME, FLOWFILE_SIZE, QUEUED_DURATION, FLOWFILE_AGE, PENALIZATION"
+            )
+            @FormParam("sortColumn") String sortColumn,
+            @ApiParam(
+                value = "The sort direction.",
+                required = false,
+                defaultValue = "asc",
+                allowableValues = "asc, desc"
+            )
+            @FormParam("sortOrder") @DefaultValue("asc") String sortOrder) {
+
+        // parse the sort column
+        final SortColumn column;
+        if (sortColumn == null) {
+            column = SortColumn.QUEUE_POSITION;
+        } else {
+            try {
+                column = SortColumn.valueOf(sortColumn);
+            } catch (final IllegalArgumentException iae) {
+                throw new IllegalArgumentException(String.format("Sort Column: Value must be one of [%s]", StringUtils.join(SortColumn.values(), ", ")));
+            }
+        }
+
+        // normalize the sort order
+        if (!sortOrder.equalsIgnoreCase("asc") && !sortOrder.equalsIgnoreCase("desc")) {
+            throw new IllegalArgumentException("The sort order must be 'asc' or 'desc'.");
+        }
 
         // replicate if cluster manager
         if (properties.isClusterManager()) {
@@ -1287,6 +1320,13 @@ public class ConnectionResource extends ApplicationResource {
             return generateContinueResponse().build();
         }
 
+        final SortDirection direction;
+        if (sortOrder.equalsIgnoreCase("asc")) {
+            direction = SortDirection.ASCENDING;
+        } else {
+            direction = SortDirection.DESCENDING;
+        }
+
         // ensure the id is the same across the cluster
         final String listingRequestId;
         final ClusterContext clusterContext = ClusterContextThreadLocal.getContext();
@@ -1297,7 +1337,7 @@ public class ConnectionResource extends ApplicationResource {
         }
 
         // submit the listing request
-        final ListingRequestDTO listingRequest = serviceFacade.createFlowFileListingRequest(groupId, id, listingRequestId);
+        final ListingRequestDTO listingRequest = serviceFacade.createFlowFileListingRequest(groupId, id, listingRequestId, column, direction);
         populateRemainingFlowFileListingContent(id, listingRequest);
 
         // create the revision

@@ -119,6 +119,8 @@
         <jsp:include page="/WEB-INF/partials/canvas/label-configuration.jsp"/>
         <jsp:include page="/WEB-INF/partials/canvas/connection-configuration.jsp"/>
         <jsp:include page="/WEB-INF/partials/canvas/drop-request-status-dialog.jsp"/>
+        <jsp:include page="/WEB-INF/partials/canvas/listing-request-status-dialog.jsp"/>
+        <jsp:include page="/WEB-INF/partials/canvas/queue-listing.jsp"/>
         <jsp:include page="/WEB-INF/partials/connection-details.jsp"/>
         <div id="faded-background"></div>
         <div id="glass-pane"></div>

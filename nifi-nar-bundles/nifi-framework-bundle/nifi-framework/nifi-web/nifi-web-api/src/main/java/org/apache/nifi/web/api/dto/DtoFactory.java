@@ -378,9 +378,10 @@ public final class DtoFactory {
         if (isListingRequestComplete(listingRequest.getState())) {
             final List<FlowFileSummary> flowFileSummaries = listingRequest.getFlowFileSummaries();
             if (flowFileSummaries != null) {
+                final Date now = new Date();
                 final List<FlowFileSummaryDTO> summaryDtos = new ArrayList<>(flowFileSummaries.size());
                 for (final FlowFileSummary summary : flowFileSummaries) {
-                    summaryDtos.add(createFlowFileSummaryDTO(summary));
+                    summaryDtos.add(createFlowFileSummaryDTO(summary, now));
                 }
                 dto.setFlowFileSummaries(summaryDtos);
             }
@@ -395,15 +396,20 @@ public final class DtoFactory {
      * @param summary summary
      * @return dto
      */
-    public FlowFileSummaryDTO createFlowFileSummaryDTO(final FlowFileSummary summary) {
+    public FlowFileSummaryDTO createFlowFileSummaryDTO(final FlowFileSummary summary, final Date now) {
         final FlowFileSummaryDTO dto = new FlowFileSummaryDTO();
         dto.setUuid(summary.getUuid());
         dto.setFilename(summary.getFilename());
-        dto.setLastQueuedTime(new Date(summary.getLastQueuedTime()));
-        dto.setLinageStartDate(new Date(summary.getLineageStartDate()));
         dto.setPenalized(summary.isPenalized());
         dto.setPosition(summary.getPosition());
         dto.setSize(summary.getSize());
+
+        final long queuedDuration = now.getTime() - summary.getLastQueuedTime();
+        dto.setQueuedDuration(queuedDuration);
+
+        final long age = now.getTime() - summary.getLineageStartDate();
+        dto.setLineageDuration(age);
+
         return dto;
     }
 
@@ -414,14 +420,20 @@ public final class DtoFactory {
      * @return dto
      */
     public FlowFileDTO createFlowFileDTO(final FlowFileRecord record) {
+        final Date now = new Date();
         final FlowFileDTO dto = new FlowFileDTO();
         dto.setUuid(record.getAttribute(CoreAttributes.UUID.key()));
         dto.setFilename(record.getAttribute(CoreAttributes.FILENAME.key()));
-        dto.setLastQueuedTime(new Date(record.getLastQueueDate()));
-        dto.setLinageStartDate(new Date(record.getLineageStartDate()));
         dto.setPenalized(record.isPenalized());
         dto.setSize(record.getSize());
         dto.setAttributes(record.getAttributes());
+
+        final long queuedDuration = now.getTime() - record.getLastQueueDate();
+        dto.setQueuedDuration(queuedDuration);
+
+        final long age = now.getTime() - record.getLineageStartDate();
+        dto.setLineageDuration(age);
+
         return dto;
     }
 

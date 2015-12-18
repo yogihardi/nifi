@@ -21,6 +21,8 @@ import java.util.Date;
 import java.util.Set;
 import org.apache.nifi.controller.ScheduledState;
 
+import org.apache.nifi.controller.queue.SortColumn;
+import org.apache.nifi.controller.queue.SortDirection;
 import org.apache.nifi.controller.repository.claim.ContentDirection;
 import org.apache.nifi.controller.service.ControllerServiceState;
 import org.apache.nifi.web.api.dto.BulletinBoardDTO;
@@ -583,9 +585,11 @@ public interface NiFiServiceFacade {
      * @param groupId group
      * @param connectionId The ID of the connection
      * @param listingRequestId The ID of the listing request
+     * @param column sort column
+     * @param direction sort direction
      * @return The ListingRequest
      */
-    ListingRequestDTO createFlowFileListingRequest(String groupId, String connectionId, String listingRequestId);
+    ListingRequestDTO createFlowFileListingRequest(String groupId, String connectionId, String listingRequestId, SortColumn column, SortDirection direction);
 
     /**
      * Gets a new flow file listing request.

@@ -68,7 +68,7 @@ public class FlowFileSummaries {
                     case FILENAME:
                         return o1.getFilename().compareTo(o2.getFilename());
                     case FLOWFILE_AGE:
-                        return o1.getLinageStartDate().compareTo(o2.getLinageStartDate());
+                        return o1.getLineageDuration().compareTo(o2.getLineageDuration());
                     case FLOWFILE_SIZE:
                         return Long.compare(o1.getSize(), o2.getSize());
                     case FLOWFILE_UUID:
@@ -78,7 +78,7 @@ public class FlowFileSummaries {
                     case QUEUE_POSITION:
                         return Long.compare(o1.getPosition(), o2.getPosition());
                     case QUEUED_DURATION:
-                        return o1.getLastQueuedTime().compareTo(o2.getLastQueuedTime());
+                        return o1.getQueuedDuration().compareTo(o2.getQueuedDuration());
                 }
 
                 return 0;

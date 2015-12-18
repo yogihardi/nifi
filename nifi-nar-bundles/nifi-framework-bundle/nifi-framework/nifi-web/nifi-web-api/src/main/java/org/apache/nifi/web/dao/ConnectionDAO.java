@@ -20,6 +20,8 @@ import java.util.Set;
 import org.apache.nifi.connectable.Connection;
 import org.apache.nifi.controller.queue.DropFlowFileStatus;
 import org.apache.nifi.controller.queue.ListFlowFileStatus;
+import org.apache.nifi.controller.queue.SortColumn;
+import org.apache.nifi.controller.queue.SortDirection;
 import org.apache.nifi.controller.repository.FlowFileRecord;
 import org.apache.nifi.web.DownloadableContent;
 import org.apache.nifi.web.api.dto.ConnectionDTO;
@@ -116,9 +118,11 @@ public interface ConnectionDAO {
      * @param groupId group id
      * @param id connection id
      * @param listingRequestId listing request id
+     * @param column sort column
+     * @param direction sort direction
      * @return The listing request status
      */
-    ListFlowFileStatus createFlowFileListingRequest(String groupId, String id, String listingRequestId);
+    ListFlowFileStatus createFlowFileListingRequest(String groupId, String id, String listingRequestId, SortColumn column, SortDirection direction);
 
     /**
      * Verifies the listing can be processed.
