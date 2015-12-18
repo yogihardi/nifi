@@ -2869,6 +2869,9 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
         int numStepsTotal = 0;
         boolean finished = true;
         for (final Map.Entry<NodeIdentifier, ListingRequestDTO> entry : listingRequestMap.entrySet()) {
+            final NodeIdentifier nodeIdentifier = entry.getKey();
+            final String nodeAddress = nodeIdentifier.getApiAddress() + ":" + nodeIdentifier.getApiPort();
+
             final ListingRequestDTO nodeRequest = entry.getValue();
 
             numStepsCompleted += nodeRequest.getCompletedStepCount();
@@ -2889,7 +2892,9 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
             }
 
             for (final FlowFileSummaryDTO summaryDTO : nodeRequest.getFlowFileSummaries()) {
-                summaryDTO.setClusterNodeId(entry.getKey().getId());
+                summaryDTO.setClusterNodeId(nodeIdentifier.getId());
+                summaryDTO.setClusterNodeAddress(nodeAddress);
+
                 flowFileSummaries.add(summaryDTO);
 
                 // Keep the set from growing beyond our max

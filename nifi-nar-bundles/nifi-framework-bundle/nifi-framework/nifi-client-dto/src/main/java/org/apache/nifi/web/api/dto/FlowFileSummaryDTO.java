@@ -30,7 +30,8 @@ public class FlowFileSummaryDTO {
     private Long lineageDuration;
     private Boolean isPenalized;
 
-    private String clusterNodeId;
+    private String clusterNodeId; // include when clustered
+    private String clusterNodeAddress; // include when clustered
 
     /**
      * @return the FlowFile uri
@@ -156,5 +157,19 @@ public class FlowFileSummaryDTO {
 
     public void setClusterNodeId(String clusterNodeId) {
         this.clusterNodeId = clusterNodeId;
+    }
+
+    /**
+     * @return label for the node where this FlowFile resides
+     */
+    @ApiModelProperty(
+        value = "The label for the node where this FlowFile resides."
+    )
+    public String getClusterNodeAddress() {
+        return clusterNodeAddress;
+    }
+
+    public void setClusterNodeAddress(String clusterNodeAddress) {
+        this.clusterNodeAddress = clusterNodeAddress;
     }
 }

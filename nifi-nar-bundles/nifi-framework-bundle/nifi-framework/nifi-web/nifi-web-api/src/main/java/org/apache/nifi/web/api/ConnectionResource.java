@@ -1027,63 +1027,6 @@ public class ConnectionResource extends ApplicationResource {
         return generateOkResponse(entity).build();
     }
 
-    @DELETE
-    @Consumes(MediaType.WILDCARD)
-    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    @Path("/{connection-id}/flowfiles/{flowfile-uuid}")
-    @PreAuthorize("hasRole('ROLE_DFM')")
-    public Response deleteFlowFile(
-            @Context HttpServletRequest httpServletRequest,
-            @ApiParam(
-                value = "If the client id is not specified, new one will be generated. This value (whether specified or generated) is included in the response.",
-                required = false
-            )
-            @QueryParam(CLIENT_ID) @DefaultValue(StringUtils.EMPTY) ClientIdParameter clientId,
-            @ApiParam(
-                value = "The connection id.",
-                required = true
-            )
-            @PathParam("connection-id") String connectionId,
-            @ApiParam(
-                value = "The flowfile uuid.",
-                required = true
-            )
-            @PathParam("flowfile-uuid") String flowFileUuid,
-            @ApiParam(
-                value = "The id of the node where the content exists if clustered.",
-                required = false
-            )
-            @QueryParam("clusterNodeId") String clusterNodeId) {
-
-        // replicate if cluster manager
-        if (properties.isClusterManager()) {
-            // determine where this request should be sent
-            if (clusterNodeId == null) {
-                throw new IllegalArgumentException("The id of the node in the cluster is required.");
-            } else {
-                // get the target node and ensure it exists
-                final Node targetNode = clusterManager.getNode(clusterNodeId);
-                if (targetNode == null) {
-                    throw new UnknownNodeException("The specified cluster node does not exist.");
-                }
-
-                final Set<NodeIdentifier> targetNodes = new HashSet<>();
-                targetNodes.add(targetNode.getNodeId());
-
-                // replicate the request to the specific node
-                return clusterManager.applyRequest(HttpMethod.DELETE, getAbsolutePath(), getRequestParameters(true), getHeaders(), targetNodes).getResponse();
-            }
-        }
-
-        // handle expects request (usually from the cluster manager)
-        final String expects = httpServletRequest.getHeader(WebClusterManager.NCM_EXPECTS_HTTP_HEADER);
-        if (expects != null) {
-            return generateContinueResponse().build();
-        }
-
-        return null;
-    }
-
     /**
      * Gets the content for the specified flowfile in the specified connection.
      *

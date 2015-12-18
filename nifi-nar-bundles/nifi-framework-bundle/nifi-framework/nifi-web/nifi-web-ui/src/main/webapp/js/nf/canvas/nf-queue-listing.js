@@ -195,7 +195,7 @@ nf.QueueListing = (function () {
                             });
                         }
                     }
-                });
+                }).fail(nf.Common.handleAjaxError);
             } else {
                 // close the dialog
                 $('#listing-request-status-dialog').modal('hide');
@@ -234,7 +234,7 @@ nf.QueueListing = (function () {
             }).done(function(response) {
                 listingRequest = response.listingRequest;
                 processListingRequest(nextDelay);
-            }).fail(completeListingRequest);
+            }).fail(completeListingRequest).fail(nf.Common.handleAjaxError);
         };
 
         // issue the request to list the flow files
@@ -242,8 +242,8 @@ nf.QueueListing = (function () {
             type: 'POST',
             url: connection.component.uri + '/listing-requests',
             data: {
-                sortCol: sortCol,
-                sortDir: sortAsc ? 'asc' : 'desc'
+                sortColumn: sortCol,
+                sortOrder: sortAsc ? 'asc' : 'desc'
             },
             dataType: 'json'
         }).done(function(response) {
@@ -256,7 +256,7 @@ nf.QueueListing = (function () {
             // process the drop request
             listingRequest = response.listingRequest;
             processListingRequest(1);
-        }).fail(completeListingRequest);
+        }).fail(completeListingRequest).fail(nf.Common.handleAjaxError);
     };
 
     /**
@@ -274,24 +274,6 @@ nf.QueueListing = (function () {
 
             // show the flowfile details dialog
 
-        }).fail(nf.Common.handleAjaxError);
-    };
-
-    /**
-     * Deletes the specified flowfile.
-     *
-     * @param flowFileSummary the flowfile summary
-     */
-    var deleteFlowfile = function (flowFileSummary) {
-        $.ajax({
-            type: 'DELETE',
-            url: flowFileSummary.uri,
-            dataType: 'json'
-        }).done(function(response) {
-            // get the table and update the row accordingly
-            var queueListingGrid = $('#queue-listing-table').data('gridInstance');
-            var queueListingData = queueListingGrid.getData();
-            queueListingData.deleteItem(flowFileSummary.uuid);
         }).fail(nf.Common.handleAjaxError);
     };
 
@@ -330,23 +312,22 @@ nf.QueueListing = (function () {
                 return nf.Common.formatDuration(value);
             }
 
-            // function for formatting the actions column
-            var actionFormatter = function (row, cell, value, columnDef, dataContext) {
-                return '<img src="images/iconDelete.png" title="Delete FlowFile" class="pointer delete-flowfile" style="margin-top: 2px;"/>';
-            };
-
             // initialize the queue listing table
-            var flowFileListingColumns = [
-                {id: 'moreDetails', field: 'moreDetails', name: '&nbsp;', resizable: false, formatter: moreDetailsFormatter, sortable: true, width: 50, maxWidth: 50},
-                {id: 'QUEUE_POSITION', name: 'Position', field: 'position', sortable: true, resizable: true},
+            var queueListingColumns = [
+                {id: 'moreDetails', field: 'moreDetails', name: '&nbsp;', sortable: false, resizable: false, formatter: moreDetailsFormatter, width: 50, maxWidth: 50},
+                {id: 'QUEUE_POSITION', name: 'Position', field: 'position', sortable: true, resizable: false, width: 75, maxWidth: 75},
                 {id: 'FLOWFILE_UUID', name: 'UUID', field: 'uuid', sortable: true, resizable: true},
                 {id: 'FILENAME', name: 'Filename', field: 'filename', sortable: true, resizable: true},
                 {id: 'FLOWFILE_SIZE', name: 'File Size', field: 'size', sortable: true, resizable: true, defaultSortAsc: false, formatter: dataSizeFormatter},
                 {id: 'QUEUED_DURATION', name: 'Queued Duration', field: 'queuedDuration', sortable: true, resizable: true, formatter: formatDuration},
                 {id: 'FLOWFILE_AGE', name: 'Lineage Duration', field: 'lineageDuration', sortable: true, resizable: true, formatter: formatDuration},
-                {id: 'PENALIZATION', name: 'Penalized', field: 'penalized', sortable: true, resizable: true},
-                {id: 'actions', name: '&nbsp;', sortable: false, resizable: false, formatter: actionFormatter, width: 100, maxWidth: 100}
+                {id: 'PENALIZATION', name: 'Penalized', field: 'penalized', sortable: true, resizable: false, width: 100, maxWidth: 100}
             ];
+
+            // conditionally show the cluster node identifier
+            if (nf.Canvas.isClustered()) {
+                queueListingColumns.push({id: 'clusterNodeAddress', name: 'Node', field: 'clusterNodeAddress', sortable: false, resizable: true});
+            }
 
             var queueListingOptions = {
                 forceFitColumns: true,
@@ -363,7 +344,7 @@ nf.QueueListing = (function () {
             queueListingData.setItems([]);
 
             // initialize the grid
-            var queueListingGrid = new Slick.Grid('#queue-listing-table', queueListingData, flowFileListingColumns, queueListingOptions);
+            var queueListingGrid = new Slick.Grid('#queue-listing-table', queueListingData, queueListingColumns, queueListingOptions);
             queueListingGrid.setSelectionModel(new Slick.RowSelectionModel());
             queueListingGrid.registerPlugin(new Slick.AutoTooltips());
             queueListingGrid.setSortColumn(DEFAULT_SORT_COL, DEFAULT_SORT_ASC);
