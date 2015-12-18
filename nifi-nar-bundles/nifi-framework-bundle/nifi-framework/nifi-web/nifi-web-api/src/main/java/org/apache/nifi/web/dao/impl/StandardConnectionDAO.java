@@ -378,6 +378,10 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
     public ListFlowFileStatus createFlowFileListingRequest(String groupId, String id, String listingRequestId, SortColumn column, SortDirection direction) {
         final Connection connection = locateConnection(groupId, id);
         final FlowFileQueue queue = connection.getFlowFileQueue();
+
+        // ensure we can list
+        verifyList(queue);
+
         return queue.listFlowFiles(listingRequestId, 100, column, direction);
     }
 
@@ -392,11 +396,15 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
         }
     }
 
+    private void verifyList(final FlowFileQueue queue) {
+        queue.verifyCanList();
+    }
+
     @Override
     public void verifyList(String groupId, String id) {
         final Connection connection = locateConnection(groupId, id);
         final FlowFileQueue queue = connection.getFlowFileQueue();
-        queue.verifyCanList();
+        verifyList(queue);
     }
 
     @Override
