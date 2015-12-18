@@ -354,6 +354,13 @@ public final class DtoFactory {
         return ListFlowFileState.COMPLETE.equals(state) || ListFlowFileState.CANCELED.equals(state) || ListFlowFileState.FAILURE.equals(state);
     }
 
+    private QueueSizeDTO createQueueSizeDTO(final QueueSize queueSize) {
+        final QueueSizeDTO dto = new QueueSizeDTO();
+        dto.setByteCount(queueSize.getByteCount());
+        dto.setObjectCount(queueSize.getObjectCount());
+        return dto;
+    }
+
     /**
      * Creates a ListingRequestDTO from the specified ListFlowFileStatus.
      *
@@ -374,6 +381,8 @@ public final class DtoFactory {
         dto.setTotalStepCount(listingRequest.getTotalStepCount());
         dto.setCompletedStepCount(listingRequest.getCompletedStepCount());
         dto.setPercentCompleted(listingRequest.getCompletionPercentage());
+
+        dto.setQueueSize(createQueueSizeDTO(listingRequest.getQueueSize()));
 
         if (isListingRequestComplete(listingRequest.getState())) {
             final List<FlowFileSummary> flowFileSummaries = listingRequest.getFlowFileSummaries();

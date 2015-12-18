@@ -16,12 +16,12 @@
 --%>
 <%@ page contentType="text/html" pageEncoding="UTF-8" session="false" %>
 <div id="queue-listing-container" class="hidden">
-    <div id="queue-listing-header-and-filter">
+    <div id="queue-listing-header-container">
         <div id="queue-listing-header-text"></div>
     </div>
-    <div id="queue-listing-refresh-container">
-        <div id="queue-listing-last-refreshed-container">
-            Last updated:&nbsp;<span id="queue-listing-last-refreshed"></span>
+    <div id="queue-listing-stats-container">
+        <div id="queue-listing-stats">
+            Displaying&nbsp;<span id="displayed-flowfiles"></span>&nbsp;of&nbsp;<span id="total-flowfiles-count"></span>&nbsp;(<span id="total-flowfiles-size"></span>)
         </div>
         <div id="queue-listing-loading-container" class="loading-container"></div>
     </div>

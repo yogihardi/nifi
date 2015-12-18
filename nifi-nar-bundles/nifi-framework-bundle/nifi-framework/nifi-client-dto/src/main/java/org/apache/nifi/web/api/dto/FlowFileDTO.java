@@ -18,8 +18,10 @@ package org.apache.nifi.web.api.dto;
 
 import com.wordnik.swagger.annotations.ApiModelProperty;
 
+import javax.xml.bind.annotation.XmlType;
 import java.util.Map;
 
+@XmlType(name = "flowFile")
 public class FlowFileDTO extends FlowFileSummaryDTO {
 
     private Map<String, String> attributes;

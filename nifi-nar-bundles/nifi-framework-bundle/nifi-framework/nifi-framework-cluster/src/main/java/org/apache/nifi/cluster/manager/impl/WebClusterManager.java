@@ -209,6 +209,7 @@ import org.apache.nifi.web.api.dto.ListingRequestDTO;
 import org.apache.nifi.web.api.dto.NodeDTO;
 import org.apache.nifi.web.api.dto.ProcessGroupDTO;
 import org.apache.nifi.web.api.dto.ProcessorDTO;
+import org.apache.nifi.web.api.dto.QueueSizeDTO;
 import org.apache.nifi.web.api.dto.RemoteProcessGroupContentsDTO;
 import org.apache.nifi.web.api.dto.RemoteProcessGroupDTO;
 import org.apache.nifi.web.api.dto.RemoteProcessGroupPortDTO;
@@ -2867,6 +2868,8 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
         ListFlowFileState state = null;
         int numStepsCompleted = 0;
         int numStepsTotal = 0;
+        int objectCount = 0;
+        long byteCount = 0;
         boolean finished = true;
         for (final Map.Entry<NodeIdentifier, ListingRequestDTO> entry : listingRequestMap.entrySet()) {
             final NodeIdentifier nodeIdentifier = entry.getKey();
@@ -2876,6 +2879,10 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
 
             numStepsCompleted += nodeRequest.getCompletedStepCount();
             numStepsTotal += nodeRequest.getTotalStepCount();
+
+            final QueueSizeDTO nodeQueueSize = nodeRequest.getQueueSize();
+            objectCount += nodeQueueSize.getObjectCount();
+            byteCount += nodeQueueSize.getByteCount();
 
             if (!nodeRequest.getFinished()) {
                 finished = false;
@@ -2914,6 +2921,9 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
         final int percentCompleted = numStepsCompleted / numStepsTotal;
         listingRequest.setPercentCompleted(percentCompleted);
         listingRequest.setFinished(finished);
+
+        listingRequest.getQueueSize().setByteCount(byteCount);
+        listingRequest.getQueueSize().setObjectCount(objectCount);
     }
 
     /**

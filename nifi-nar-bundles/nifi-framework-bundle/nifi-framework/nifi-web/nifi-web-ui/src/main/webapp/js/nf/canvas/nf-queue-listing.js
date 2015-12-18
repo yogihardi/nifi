@@ -180,6 +180,11 @@ nf.QueueListing = (function () {
 
                     // use the listing request from when the listing completed
                     if (nf.Common.isDefinedAndNotNull(listingRequest.flowFileSummaries)) {
+                        // update the queue size
+                        $('#total-flowfiles-count').text(nf.Common.formatInteger(listingRequest.queueSize.objectCount));
+                        $('#total-flowfiles-size').text(nf.Common.formatDataSize(listingRequest.queueSize.byteCount));
+
+                        // get the grid to load the data
                         var queueListingGrid = $('#queue-listing-table').data('gridInstance');
                         var queueListingData = queueListingGrid.getData();
 
@@ -195,7 +200,7 @@ nf.QueueListing = (function () {
                             });
                         }
                     }
-                }).fail(nf.Common.handleAjaxError);
+                });
             } else {
                 // close the dialog
                 $('#listing-request-status-dialog').modal('hide');
@@ -308,8 +313,19 @@ nf.QueueListing = (function () {
             };
 
             // function for formatting durations
-            var formatDuration = function (row, cell, value, columnDef, dataContext) {
+            var durationFormatter = function (row, cell, value, columnDef, dataContext) {
                 return nf.Common.formatDuration(value);
+            }
+
+            // function for formatting penalization
+            var penalizedFormatter = function (row, cell, value, columnDef, dataContext) {
+                var markup = '';
+
+                if (value === true) {
+                    markup += 'Yes';
+                }
+
+                return markup;
             }
 
             // initialize the queue listing table
@@ -319,9 +335,9 @@ nf.QueueListing = (function () {
                 {id: 'FLOWFILE_UUID', name: 'UUID', field: 'uuid', sortable: true, resizable: true},
                 {id: 'FILENAME', name: 'Filename', field: 'filename', sortable: true, resizable: true},
                 {id: 'FLOWFILE_SIZE', name: 'File Size', field: 'size', sortable: true, resizable: true, defaultSortAsc: false, formatter: dataSizeFormatter},
-                {id: 'QUEUED_DURATION', name: 'Queued Duration', field: 'queuedDuration', sortable: true, resizable: true, formatter: formatDuration},
-                {id: 'FLOWFILE_AGE', name: 'Lineage Duration', field: 'lineageDuration', sortable: true, resizable: true, formatter: formatDuration},
-                {id: 'PENALIZATION', name: 'Penalized', field: 'penalized', sortable: true, resizable: false, width: 100, maxWidth: 100}
+                {id: 'QUEUED_DURATION', name: 'Queued Duration', field: 'queuedDuration', sortable: true, resizable: true, formatter: durationFormatter},
+                {id: 'FLOWFILE_AGE', name: 'Lineage Duration', field: 'lineageDuration', sortable: true, resizable: true, formatter: durationFormatter},
+                {id: 'PENALIZATION', name: 'Penalized', field: 'penalized', sortable: true, resizable: false, width: 100, maxWidth: 100, formatter: penalizedFormatter}
             ];
 
             // conditionally show the cluster node identifier
@@ -365,10 +381,6 @@ nf.QueueListing = (function () {
                     if (target.hasClass('show-flowfile-details')) {
                         showFlowFileDetails(item);
                     }
-                } else if (queueListingGrid.getColumns()[args.cell].id === 'actions') {
-                    if (target.hasClass('delete-flowfile')) {
-                        deleteFlowfile(item);
-                    }
                 }
             });
 
@@ -377,7 +389,7 @@ nf.QueueListing = (function () {
                 queueListingGrid.updateRowCount();
                 queueListingGrid.render();
 
-                // update the total number of displayed processors
+                // update the total number of displayed flowfiles
                 $('#displayed-flowfiles').text(args.current);
             });
             queueListingData.onRowsChanged.subscribe(function (e, args) {
@@ -398,9 +410,31 @@ nf.QueueListing = (function () {
          * @param   {object}    The connection
          */
         listQueue: function (connection) {
+            // update stats
+            $('#displayed-flowfiles, #total-flowfiles-count').text('0');
+            $('#total-flowfiles-size').text(nf.Common.formatDataSize(0));
+
+            // update the connection name
+            var connectionName = nf.CanvasUtils.formatConnectionName(connection.component);
+            if (connectionName === '') {
+                connectionName = 'Connection';
+            }
+            $('#queue-listing-header-text').text(connectionName);
+
             // show the listing container
             nf.Shell.showContent('#queue-listing-container').done(function () {
                 $('#queue-listing-table').removeData('connection');
+
+                // clear the table
+                var queueListingGrid = $('#queue-listing-table').data('gridInstance');
+                if (nf.Common.isDefinedAndNotNull(queueListingGrid)) {
+                    var queueListingData = queueListingGrid.getData();
+
+                    // clear the flowfiles
+                    queueListingData.beginUpdate();
+                    queueListingData.setItems([], 'uuid');
+                    queueListingData.endUpdate();
+                }
             });
 
             // adjust the table size

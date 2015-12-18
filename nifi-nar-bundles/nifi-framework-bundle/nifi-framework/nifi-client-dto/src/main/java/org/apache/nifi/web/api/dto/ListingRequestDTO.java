@@ -19,12 +19,14 @@ package org.apache.nifi.web.api.dto;
 import java.util.Date;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import org.apache.nifi.web.api.dto.util.TimestampAdapter;
 
 import com.wordnik.swagger.annotations.ApiModelProperty;
 
+@XmlType(name = "listingRequest")
 public class ListingRequestDTO {
 
     private String id;
@@ -43,6 +45,7 @@ public class ListingRequestDTO {
     private Integer completedStepCount;
 
     private String state;
+    private QueueSizeDTO queueSize;
 
     private List<FlowFileSummaryDTO> flowFileSummaries;
 
@@ -233,5 +236,17 @@ public class ListingRequestDTO {
 
     public void setCompletedStepCount(Integer completedStepCount) {
         this.completedStepCount = completedStepCount;
+    }
+
+    /**
+     * @return the size for the queue
+     */
+    @ApiModelProperty(value = "The size of the queue")
+    public QueueSizeDTO getQueueSize() {
+        return queueSize;
+    }
+
+    public void setQueueSize(QueueSizeDTO queueSize) {
+        this.queueSize = queueSize;
     }
 }

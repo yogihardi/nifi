@@ -18,6 +18,9 @@ package org.apache.nifi.web.api.dto;
 
 import com.wordnik.swagger.annotations.ApiModelProperty;
 
+import javax.xml.bind.annotation.XmlType;
+
+@XmlType(name = "flowFileSummary")
 public class FlowFileSummaryDTO {
 
     private String uri;
