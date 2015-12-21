@@ -148,6 +148,9 @@ nf.QueueListing = (function () {
                     $('#additional-flowfile-details').empty();
                 }
             }
+        }).draggable({
+            containment: 'parent',
+            handle: '.dialog-header'
         });
     };
 
