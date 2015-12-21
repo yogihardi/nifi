@@ -76,3 +76,140 @@
     border: 1px solid #666;
     overflow: hidden;
 }
+
+/* flowfile details */
+
+#flowfile-details-dialog {
+    display: none;
+    width: 800px;
+    height: 450px;
+    z-index: 1301;
+}
+
+#flowfile-details-dialog-content {
+    margin-top: -10px;
+    padding: 5px 11px
+}
+
+#flowfile-details-tabs {
+    background-color: transparent;
+    border-bottom: 3px solid #666666;
+    height: 21px;
+    width: 778px;
+}
+
+#flowfile-details-dialog div.details-tab {
+    background: url("../images/bgTabContainer.png") repeat-x scroll 0 0 #EEEEEE;
+    display: none;
+    height: 330px;
+    padding: 10px;
+}
+
+#flowfile-details-tab-content div.settings-left {
+    float: left;
+    width: 420px;
+}
+
+#flowfile-details-tab-content div.spacer {
+    float: left;
+    margin-right: 40px;
+}
+
+#flowfile-details-tab-content div.settings-right {
+    float: left;
+    width: 292px;
+}
+
+div.flowfile-header {
+    color: #264C58;
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#flowfile-attributes-container {
+    height: 290px;
+    overflow: auto;
+    border: 1px solid #aaa;
+    padding: 5px;
+}
+
+div.detail-name {
+    float: left;
+    width: 145px;
+    color: #527991;
+    font-size: 10px;
+    font-weight: bold;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: normal;
+}
+
+div.detail-value {
+    float: left;
+    width: 270px;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: normal;
+}
+
+div.attribute-detail {
+    margin-bottom: 5px;
+}
+
+div.attribute-name {
+    float: left;
+    width: 225px;
+    color: #527991;
+    font-size: 10px;
+    font-weight: bold;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: normal;
+}
+
+div.attribute-value {
+    float: left;
+    width: 490px;
+    margin-left: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: normal;
+}
+
+#flowfile-attributes-header {
+    float: left;
+}
+
+div.flowfile-detail {
+    margin-bottom: 4px;
+}
+
+#content-download {
+    float: left;
+    margin: 0;
+}
+
+#content-view {
+    float: left;
+    margin-left: 5px;
+}
+
+div.content-detail-name {
+    color: #527991;
+    float: left;
+    font-size: 10px;
+    font-weight: bold;
+    line-height: normal;
+    overflow: hidden;
+    white-space: nowrap;
+    width: 90px;
+}
+
+div.content-detail-value {
+    width: 200px;
+    float: left;
+    line-height: normal;
+    overflow: hidden;
+    white-space: nowrap;
+}

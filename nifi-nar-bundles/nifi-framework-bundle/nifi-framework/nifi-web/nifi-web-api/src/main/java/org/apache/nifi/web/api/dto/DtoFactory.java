@@ -79,6 +79,8 @@ import org.apache.nifi.controller.queue.FlowFileSummary;
 import org.apache.nifi.controller.queue.ListFlowFileState;
 import org.apache.nifi.controller.queue.ListFlowFileStatus;
 import org.apache.nifi.controller.repository.FlowFileRecord;
+import org.apache.nifi.controller.repository.claim.ContentClaim;
+import org.apache.nifi.controller.repository.claim.ResourceClaim;
 import org.apache.nifi.controller.status.ConnectionStatus;
 import org.apache.nifi.controller.status.PortStatus;
 import org.apache.nifi.controller.status.ProcessGroupStatus;
@@ -442,6 +444,17 @@ public final class DtoFactory {
 
         final long age = now.getTime() - record.getLineageStartDate();
         dto.setLineageDuration(age);
+
+        final ContentClaim contentClaim = record.getContentClaim();
+        if (contentClaim != null) {
+            final ResourceClaim resourceClaim = contentClaim.getResourceClaim();
+            dto.setContentClaimSection(resourceClaim.getSection());
+            dto.setContentClaimContainer(resourceClaim.getContainer());
+            dto.setContentClaimIdentifier(resourceClaim.getId());
+            dto.setContentClaimOffset(contentClaim.getOffset());
+            dto.setContentClaimFileSizeBytes(contentClaim.getLength());
+            dto.setContentClaimFileSize(FormatUtils.formatDataSize(contentClaim.getLength()));
+        }
 
         return dto;
     }

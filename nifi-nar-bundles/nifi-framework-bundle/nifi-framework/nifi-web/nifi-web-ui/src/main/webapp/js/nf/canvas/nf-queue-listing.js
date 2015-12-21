@@ -55,39 +55,30 @@ nf.QueueListing = (function () {
     };
 
     /**
-     * Downloads the content for the provenance event that is currently loaded in the specified direction.
-     *
-     * @param {string} direction
+     * Downloads the content for the flowfile currently being viewed.
      */
-    var downloadContent = function (direction) {
-        var connection = $('#queue-listing-table').data('connection');
-
-        // build the url to the data
-        var url = config.urls.provenance + '/events/' + encodeURIComponent(eventId) + '/content/' + encodeURIComponent(direction);
+    var downloadContent = function () {
+        var dataUri = $('#flowfile-uri').text() + '/content';
 
         // conditionally include the cluster node id
-        var clusterNodeId = $('#provenance-event-cluster-node-id').text();
+        var clusterNodeId = $('#flowfile-cluster-node-id').text();
         if (!nf.Common.isBlank(clusterNodeId)) {
-            window.open(url + '?' + $.param({
+            window.open(dataUri + '?' + $.param({
                     'clusterNodeId': clusterNodeId
                 }));
         } else {
-            window.open(url);
+            window.open(dataUri);
         }
     };
 
     /**
-     * Views the content for the provenance event that is currently loaded in the specified direction.
-     *
-     * @param {string} direction
+     * Views the content for the flowfile currently being viewed.
      */
-    var viewContent = function (direction) {
-
-        // build the uri to the data
-        var dataUri = controllerUri + '/provenance/events/' + encodeURIComponent(eventId) + '/content/' + encodeURIComponent(direction);
+    var viewContent = function () {
+        var dataUri = $('#flowfile-uri').text() + '/content';
 
         // conditionally include the cluster node id
-        var clusterNodeId = $('#provenance-event-cluster-node-id').text();
+        var clusterNodeId = $('#flowfile-cluster-node-id').text();;
         if (!nf.Common.isBlank(clusterNodeId)) {
             var parameters = {
                 'clusterNodeId': clusterNodeId
@@ -118,7 +109,46 @@ nf.QueueListing = (function () {
      * Initializes the flowfile details dialog.
      */
     var initFlowFileDetailsDialog = function () {
+        $('#content-download').on('click', downloadContent);
 
+        // only show if content viewer is configured
+        if (nf.Common.isContentViewConfigured()) {
+            $('#content-view').show();
+            $('#content-view').on('click', viewContent);
+        }
+
+        $('#flowfile-details-tabs').tabbs({
+            tabStyle: 'tab',
+            selectedTabStyle: 'selected-tab',
+            tabs: [{
+                name: 'Details',
+                tabContentId: 'flowfile-details-tab-content'
+            }, {
+                name: 'Attributes',
+                tabContentId: 'flowfile-attributes-tab-content'
+            }]
+        });
+
+        $('#flowfile-details-dialog').modal({
+            headerText: 'FlowFile',
+            overlayBackground: false,
+            buttons: [{
+                buttonText: 'Ok',
+                handler: {
+                    click: function () {
+                        $('#flowfile-details-dialog').modal('hide');
+                    }
+                }
+            }],
+            handler: {
+                close: function () {
+                    // clear the details
+                    $('#flowfile-attributes-container').empty();
+                    $('#flowfile-cluster-node-id').text('');
+                    $('#additional-flowfile-details').empty();
+                }
+            }
+        });
     };
 
     /**
@@ -129,7 +159,6 @@ nf.QueueListing = (function () {
      * @param sortAsc if sort is asc
      */
     var performListing = function (connection, sortCol, sortAsc) {
-
         var MAX_DELAY = 4;
         var cancelled = false;
         var listingRequest = null;
@@ -270,15 +299,91 @@ nf.QueueListing = (function () {
      * @param flowFileSummary the flowfile summary
      */
     var showFlowFileDetails = function (flowFileSummary) {
+        // formats an flowfile detail
+        var formatFlowFileDetail = function (label, value) {
+            $('<div class="flowfile-detail"></div>').append(
+                $('<div class="detail-name"></div>').text(label)).append(
+                $('<div class="detail-value">' + nf.Common.formatValue(value) + '</div>').ellipsis()).append(
+                $('<div class="clear"></div>')).appendTo('#additional-flowfile-details');
+        };
+
+        // formats the content value
+        var formatContentValue = function (element, value) {
+            if (nf.Common.isDefinedAndNotNull(value)) {
+                element.removeClass('unset').text(value);
+            } else {
+                element.addClass('unset').text('No value set');
+            }
+        };
+
         $.ajax({
             type: 'GET',
             url: flowFileSummary.uri,
             dataType: 'json'
         }).done(function(response) {
-            var flowFile = response.flowfile;
+            var flowFile = response.flowFile;
+
+            // show the URI to this flowfile
+            $('#flowfile-uri').text(flowFile.uri);
 
             // show the flowfile details dialog
+            $('#flowfile-uuid').html(nf.Common.formatValue(flowFile.uuid));
+            $('#flowfile-filename').html(nf.Common.formatValue(flowFile.filename));
+            $('#flowfile-queue-position').html(nf.Common.formatValue(flowFile.position));
+            $('#flowfile-file-size').html(nf.Common.formatValue(flowFile.contentClaimFileSize));
+            $('#flowfile-queued-duration').text(nf.Common.formatDuration(flowFile.queuedDuration));
+            $('#flowfile-lineage-duration').text(nf.Common.formatDuration(flowFile.lineageDuration));
+            $('#flowfile-penalized').text(flowFile.penalized === true ? 'Yes' : 'No');
 
+            // conditionally show the cluster node identifier
+            if (nf.Common.isDefinedAndNotNull(flowFile.clusterNodeId)) {
+                // save the cluster node id
+                $('#flowfile-cluster-node-id').text(flowFile.clusterNodeId);
+
+                // render the cluster node address
+                formatFlowFileDetail('Node Address', flowFile.clusterNodeAddress);
+            }
+
+            if (nf.Common.isDefinedAndNotNull(flowFile.contentClaimContainer)) {
+                // content claim
+                formatContentValue($('#content-container'), flowFile.contentClaimContainer);
+                formatContentValue($('#content-section'), flowFile.contentClaimSection);
+                formatContentValue($('#content-identifier'), flowFile.contentClaimIdentifier);
+                formatContentValue($('#content-offset'), flowFile.contentClaimOffset);
+                formatContentValue($('#content-bytes'), flowFile.contentClaimFileSizeBytes);
+
+                // input content file size
+                var contentSize = $('#content-size');
+                formatContentValue(contentSize, flowFile.contentClaimFileSize);
+                if (nf.Common.isDefinedAndNotNull(flowFile.contentClaimFileSize)) {
+                    // over the default tooltip with the actual byte count
+                    contentSize.attr('title', nf.Common.formatInteger(flowFile.contentClaimFileSizeBytes) + ' bytes');
+                }
+
+                // show the content details
+                $('#flowfile-content-details').show();
+            } else {
+                $('#flowfile-content-details').hide();
+            }
+
+            // attributes
+            var attributesContainer = $('#flowfile-attributes-container');
+
+            // get any action details
+            $.each(flowFile.attributes, function (attributeName, attributeValue) {
+                // create the attribute record
+                var attributeRecord = $('<div class="attribute-detail"></div>')
+                    .append($('<div class="attribute-name">' + nf.Common.formatValue(attributeName) + '</div>').ellipsis())
+                    .appendTo(attributesContainer);
+
+                // add the current value
+                attributeRecord
+                    .append($('<div class="attribute-value">' + nf.Common.formatValue(attributeValue) + '</div>').ellipsis())
+                    .append('<div class="clear"></div>');
+            });
+
+            // show the dialog
+            $('#flowfile-details-dialog').modal('show');
         }).fail(nf.Common.handleAjaxError);
     };
 
