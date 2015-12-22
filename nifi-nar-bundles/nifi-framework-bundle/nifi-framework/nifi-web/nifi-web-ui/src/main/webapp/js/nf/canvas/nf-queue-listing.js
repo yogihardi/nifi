@@ -146,10 +146,6 @@ nf.QueueListing = (function () {
                     $('#flowfile-attributes-container').empty();
                     $('#flowfile-cluster-node-id').text('');
                     $('#additional-flowfile-details').empty();
-
-                    // reset stats
-                    $('#displayed-flowfiles, #total-flowfiles-count').text('0');
-                    $('#total-flowfiles-size').text(nf.Common.formatDataSize(0));
                 }
             }
         }).draggable({
@@ -558,6 +554,10 @@ nf.QueueListing = (function () {
                         queueListingData.setItems([], 'uuid');
                         queueListingData.endUpdate();
                     }
+
+                    // reset stats
+                    $('#displayed-flowfiles, #total-flowfiles-count').text('0');
+                    $('#total-flowfiles-size').text(nf.Common.formatDataSize(0));
                 });
 
                 // adjust the table size
