@@ -306,7 +306,6 @@ nf.ContextMenu = (function () {
      * @param {selection} selection
      */
     var canListQueue = function (selection) {
-        // TODO verify source/destination stopped and 0 active threads
         return nf.Common.isDFM() && isConnection(selection) && nf.CanvasUtils.supportsModification(selection);
     };
     

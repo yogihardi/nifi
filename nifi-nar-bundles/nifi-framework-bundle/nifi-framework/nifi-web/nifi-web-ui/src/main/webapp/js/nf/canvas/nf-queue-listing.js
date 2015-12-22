@@ -146,6 +146,10 @@ nf.QueueListing = (function () {
                     $('#flowfile-attributes-container').empty();
                     $('#flowfile-cluster-node-id').text('');
                     $('#additional-flowfile-details').empty();
+
+                    // reset stats
+                    $('#displayed-flowfiles, #total-flowfiles-count').text('0');
+                    $('#total-flowfiles-size').text(nf.Common.formatDataSize(0));
                 }
             }
         }).draggable({
@@ -167,51 +171,66 @@ nf.QueueListing = (function () {
         var listingRequest = null;
         var listingRequestTimer = null;
 
-        // updates the progress bar
-        var updateProgress = function (percentComplete) {
-            // remove existing labels
-            var progressBar = $('#listing-request-percent-complete');
-            progressBar.find('div.progress-label').remove();
+        return $.Deferred(function (deferred) {
+            // updates the progress bar
+            var updateProgress = function (percentComplete) {
+                // remove existing labels
+                var progressBar = $('#listing-request-percent-complete');
+                progressBar.find('div.progress-label').remove();
 
-            // update the progress bar
-            var label = $('<div class="progress-label"></div>').text(percentComplete + '%');
-            if (percentComplete > 0) {
-                label.css('margin-top', '-19px');
-            }
-            progressBar.progressbar('value', percentComplete).append(label);
-        };
+                // update the progress bar
+                var label = $('<div class="progress-label"></div>').text(percentComplete + '%');
+                if (percentComplete > 0) {
+                    label.css('margin-top', '-19px');
+                }
+                progressBar.progressbar('value', percentComplete).append(label);
+            };
 
-        // update the button model of the drop request status dialog
-        $('#listing-request-status-dialog').modal('setButtonModel', [{
-            buttonText: 'Stop',
-            handler: {
-                click: function () {
-                    cancelled = true;
+            // update the button model of the drop request status dialog
+            $('#listing-request-status-dialog').modal('setButtonModel', [{
+                buttonText: 'Stop',
+                handler: {
+                    click: function () {
+                        cancelled = true;
 
-                    // we are waiting for the next poll attempt
-                    if (listingRequestTimer !== null) {
-                        // cancel it
-                        clearTimeout(listingRequestTimer);
+                        // we are waiting for the next poll attempt
+                        if (listingRequestTimer !== null) {
+                            // cancel it
+                            clearTimeout(listingRequestTimer);
 
-                        // cancel the listing request
-                        completeListingRequest();
+                            // cancel the listing request
+                            completeListingRequest();
+                        }
                     }
                 }
-            }
-        }]);
+            }]);
 
-        // completes the listing request by removing it
-        var completeListingRequest = function () {
-            if (nf.Common.isDefinedAndNotNull(listingRequest)) {
-                $.ajax({
-                    type: 'DELETE',
-                    url: listingRequest.uri,
-                    dataType: 'json'
-                }).always(function() {
-                    $('#listing-request-status-dialog').modal('hide');
+            // completes the listing request by removing it
+            var completeListingRequest = function () {
+                $('#listing-request-status-dialog').modal('hide');
+
+                var reject = cancelled;
+
+                // ensure the listing requests are present
+                if (nf.Common.isDefinedAndNotNull(listingRequest)) {
+                    $.ajax({
+                        type: 'DELETE',
+                        url: listingRequest.uri,
+                        dataType: 'json'
+                    });
 
                     // use the listing request from when the listing completed
-                    if (nf.Common.isDefinedAndNotNull(listingRequest.flowFileSummaries)) {
+                    if (nf.Common.isEmpty(listingRequest.flowFileSummaries)) {
+                        if (cancelled === false) {
+                            reject = true;
+
+                            // show the dialog
+                            nf.Dialog.showOkDialog({
+                                dialogContent: 'The queue has no FlowFiles.',
+                                overlayBackground: false
+                            });
+                        }
+                    } else {
                         // update the queue size
                         $('#total-flowfiles-count').text(nf.Common.formatInteger(listingRequest.queueSize.objectCount));
                         $('#total-flowfiles-size').text(nf.Common.formatDataSize(listingRequest.queueSize.byteCount));
@@ -224,76 +243,74 @@ nf.QueueListing = (function () {
                         queueListingData.beginUpdate();
                         queueListingData.setItems(listingRequest.flowFileSummaries, 'uuid');
                         queueListingData.endUpdate();
-                    } else {
-                        if (cancelled === false) {
-                            nf.Dialog.showOkDialog({
-                                dialogContent: 'The queue has no FlowFiles.',
-                                overlayBackground: false
-                            });
-                        }
                     }
-                });
-            } else {
-                // close the dialog
-                $('#listing-request-status-dialog').modal('hide');
-            }
-        };
+                } else {
+                    reject = true;
+                }
 
-        // process the listing request
-        var processListingRequest = function (delay) {
-            // update the percent complete
-            updateProgress(listingRequest.percentCompleted);
+                if (reject) {
+                    deferred.reject();
+                } else {
+                    deferred.resolve();
+                }
+            };
 
-            // update the status of the listing request
-            $('#listing-request-status-message').text(listingRequest.state);
+            // process the listing request
+            var processListingRequest = function (delay) {
+                // update the percent complete
+                updateProgress(listingRequest.percentCompleted);
 
-            // close the dialog if the
-            if (listingRequest.finished === true || cancelled === true) {
-                completeListingRequest();
-            } else {
-                // wait delay to poll again
-                listingRequestTimer = setTimeout(function () {
-                    // clear the listing request timer
-                    listingRequestTimer = null;
+                // update the status of the listing request
+                $('#listing-request-status-message').text(listingRequest.state);
 
-                    // schedule to poll the status again in nextDelay
-                    pollListingRequest(Math.min(MAX_DELAY, delay * 2));
-                }, delay * 1000);
-            }
-        };
+                // close the dialog if the
+                if (listingRequest.finished === true || cancelled === true) {
+                    completeListingRequest();
+                } else {
+                    // wait delay to poll again
+                    listingRequestTimer = setTimeout(function () {
+                        // clear the listing request timer
+                        listingRequestTimer = null;
 
-        // schedule for the next poll iteration
-        var pollListingRequest = function (nextDelay) {
+                        // schedule to poll the status again in nextDelay
+                        pollListingRequest(Math.min(MAX_DELAY, delay * 2));
+                    }, delay * 1000);
+                }
+            };
+
+            // schedule for the next poll iteration
+            var pollListingRequest = function (nextDelay) {
+                $.ajax({
+                    type: 'GET',
+                    url: listingRequest.uri,
+                    dataType: 'json'
+                }).done(function(response) {
+                    listingRequest = response.listingRequest;
+                    processListingRequest(nextDelay);
+                }).fail(completeListingRequest).fail(nf.Common.handleAjaxError);
+            };
+
+            // issue the request to list the flow files
             $.ajax({
-                type: 'GET',
-                url: listingRequest.uri,
+                type: 'POST',
+                url: connection.component.uri + '/listing-requests',
+                data: {
+                    sortColumn: sortCol,
+                    sortOrder: sortAsc ? 'asc' : 'desc'
+                },
                 dataType: 'json'
             }).done(function(response) {
+                // initialize the progress bar value
+                updateProgress(0);
+
+                // show the progress dialog
+                $('#listing-request-status-dialog').modal('show');
+
+                // process the drop request
                 listingRequest = response.listingRequest;
-                processListingRequest(nextDelay);
+                processListingRequest(1);
             }).fail(completeListingRequest).fail(nf.Common.handleAjaxError);
-        };
-
-        // issue the request to list the flow files
-        $.ajax({
-            type: 'POST',
-            url: connection.component.uri + '/listing-requests',
-            data: {
-                sortColumn: sortCol,
-                sortOrder: sortAsc ? 'asc' : 'desc'
-            },
-            dataType: 'json'
-        }).done(function(response) {
-            // initialize the progress bar value
-            updateProgress(0);
-
-            // show the progress dialog
-            $('#listing-request-status-dialog').modal('show');
-
-            // process the drop request
-            listingRequest = response.listingRequest;
-            processListingRequest(1);
-        }).fail(completeListingRequest).fail(nf.Common.handleAjaxError);
+        }).promise();
     };
 
     /**
@@ -518,41 +535,37 @@ nf.QueueListing = (function () {
          * @param   {object}    The connection
          */
         listQueue: function (connection) {
-            // update stats
-            $('#displayed-flowfiles, #total-flowfiles-count').text('0');
-            $('#total-flowfiles-size').text(nf.Common.formatDataSize(0));
-
-            // update the connection name
-            var connectionName = nf.CanvasUtils.formatConnectionName(connection.component);
-            if (connectionName === '') {
-                connectionName = 'Connection';
-            }
-            $('#queue-listing-header-text').text(connectionName);
-
-            // show the listing container
-            nf.Shell.showContent('#queue-listing-container').done(function () {
-                $('#queue-listing-table').removeData('connection');
-
-                // clear the table
-                var queueListingGrid = $('#queue-listing-table').data('gridInstance');
-                if (nf.Common.isDefinedAndNotNull(queueListingGrid)) {
-                    var queueListingData = queueListingGrid.getData();
-
-                    // clear the flowfiles
-                    queueListingData.beginUpdate();
-                    queueListingData.setItems([], 'uuid');
-                    queueListingData.endUpdate();
-                }
-            });
-
-            // adjust the table size
-            resetTableSize();
-
-            // store the connection for access later
-            $('#queue-listing-table').data('connection', connection);
-
             // perform the initial listing
-            performListing(connection, DEFAULT_SORT_COL, DEFAULT_SORT_ASC);
+            performListing(connection, DEFAULT_SORT_COL, DEFAULT_SORT_ASC).done(function () {
+                // update the connection name
+                var connectionName = nf.CanvasUtils.formatConnectionName(connection.component);
+                if (connectionName === '') {
+                    connectionName = 'Connection';
+                }
+                $('#queue-listing-header-text').text(connectionName);
+
+                // show the listing container
+                nf.Shell.showContent('#queue-listing-container').done(function () {
+                    $('#queue-listing-table').removeData('connection');
+
+                    // clear the table
+                    var queueListingGrid = $('#queue-listing-table').data('gridInstance');
+                    if (nf.Common.isDefinedAndNotNull(queueListingGrid)) {
+                        var queueListingData = queueListingGrid.getData();
+
+                        // clear the flowfiles
+                        queueListingData.beginUpdate();
+                        queueListingData.setItems([], 'uuid');
+                        queueListingData.endUpdate();
+                    }
+                });
+
+                // adjust the table size
+                resetTableSize();
+
+                // store the connection for access later
+                $('#queue-listing-table').data('connection', connection);
+            });
         }
     };
 }());
