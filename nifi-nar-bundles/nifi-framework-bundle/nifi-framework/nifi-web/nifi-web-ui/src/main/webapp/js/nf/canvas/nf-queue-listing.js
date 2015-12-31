@@ -484,7 +484,6 @@ nf.QueueListing = (function () {
             var queueListingGrid = new Slick.Grid('#queue-listing-table', queueListingData, queueListingColumns, queueListingOptions);
             queueListingGrid.setSelectionModel(new Slick.RowSelectionModel());
             queueListingGrid.registerPlugin(new Slick.AutoTooltips());
-            queueListingGrid.setSortColumn(DEFAULT_SORT_COL, DEFAULT_SORT_ASC);
             queueListingGrid.onSort.subscribe(function (e, args) {
                 var connection = $('#queue-listing-table').data('connection');
                 performListing(connection, args.sortCol.id, args.sortAsc);
@@ -531,6 +530,9 @@ nf.QueueListing = (function () {
          * @param   {object}    The connection
          */
         listQueue: function (connection) {
+            var queueListingGrid = $('#queue-listing-table').data('gridInstance');
+            queueListingGrid.setSortColumn(DEFAULT_SORT_COL, DEFAULT_SORT_ASC);
+
             // perform the initial listing
             performListing(connection, DEFAULT_SORT_COL, DEFAULT_SORT_ASC).done(function () {
                 // update the connection name
@@ -545,15 +547,12 @@ nf.QueueListing = (function () {
                     $('#queue-listing-table').removeData('connection');
 
                     // clear the table
-                    var queueListingGrid = $('#queue-listing-table').data('gridInstance');
-                    if (nf.Common.isDefinedAndNotNull(queueListingGrid)) {
-                        var queueListingData = queueListingGrid.getData();
+                    var queueListingData = queueListingGrid.getData();
 
-                        // clear the flowfiles
-                        queueListingData.beginUpdate();
-                        queueListingData.setItems([], 'uuid');
-                        queueListingData.endUpdate();
-                    }
+                    // clear the flowfiles
+                    queueListingData.beginUpdate();
+                    queueListingData.setItems([], 'uuid');
+                    queueListingData.endUpdate();
 
                     // reset stats
                     $('#displayed-flowfiles, #total-flowfiles-count').text('0');
