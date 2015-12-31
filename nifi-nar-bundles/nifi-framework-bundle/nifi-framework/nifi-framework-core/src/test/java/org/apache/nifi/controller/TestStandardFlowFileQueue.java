@@ -22,9 +22,12 @@ import org.apache.nifi.connectable.Connection;
 import org.apache.nifi.controller.queue.DropFlowFileState;
 import org.apache.nifi.controller.queue.DropFlowFileStatus;
 import org.apache.nifi.controller.queue.FlowFileQueue;
+import org.apache.nifi.controller.queue.FlowFileSummary;
 import org.apache.nifi.controller.queue.ListFlowFileState;
 import org.apache.nifi.controller.queue.ListFlowFileStatus;
 import org.apache.nifi.controller.queue.QueueSize;
+import org.apache.nifi.controller.queue.SortDirection;
+import org.apache.nifi.controller.queue.SortColumn;
 import org.apache.nifi.controller.repository.FlowFileRecord;
 import org.apache.nifi.controller.repository.FlowFileRepository;
 import org.apache.nifi.controller.repository.FlowFileSwapManager;
@@ -481,7 +484,7 @@ public class TestStandardFlowFileQueue {
         assertEquals(4, status.getCompletedStepCount());
     }
 
-    @Test(timeout = 5000000)
+    @Test(timeout = 5000)
     public void testListFlowFilesResultsLimited() throws InterruptedException {
         for (int i = 0; i < 30050; i++) {
             queue.put(new TestFlowFile());
@@ -501,6 +504,61 @@ public class TestStandardFlowFileQueue {
         assertEquals(4, status.getTotalStepCount());
         assertEquals(4, status.getCompletedStepCount());
     }
+
+    @Test
+    public void testListFlowFilesSortedAscending() throws InterruptedException {
+        for (int i = 0; i < 30050; i++) {
+            queue.put(new TestFlowFile(i));
+        }
+
+        final ListFlowFileStatus status = queue.listFlowFiles(UUID.randomUUID().toString(), 100, SortColumn.FLOWFILE_SIZE, SortDirection.ASCENDING);
+        assertNotNull(status);
+        assertEquals(30050, status.getQueueSize().getObjectCount());
+
+        while (status.getState() != ListFlowFileState.COMPLETE) {
+            Thread.sleep(100);
+        }
+
+        assertEquals(100, status.getFlowFileSummaries().size());
+        assertEquals(100, status.getCompletionPercentage());
+
+        assertNull(status.getFailureReason());
+        assertEquals(4, status.getTotalStepCount());
+        assertEquals(4, status.getCompletedStepCount());
+
+        int counter = 0;
+        for (final FlowFileSummary summary : status.getFlowFileSummaries()) {
+            assertEquals(counter++, summary.getSize());
+        }
+    }
+
+    @Test
+    public void testListFlowFilesSortedDescending() throws InterruptedException {
+        for (int i = 0; i < 30050; i++) {
+            queue.put(new TestFlowFile(i));
+        }
+
+        final ListFlowFileStatus status = queue.listFlowFiles(UUID.randomUUID().toString(), 100, SortColumn.FLOWFILE_SIZE, SortDirection.DESCENDING);
+        assertNotNull(status);
+        assertEquals(30050, status.getQueueSize().getObjectCount());
+
+        while (status.getState() != ListFlowFileState.COMPLETE) {
+            Thread.sleep(100);
+        }
+
+        assertEquals(100, status.getFlowFileSummaries().size());
+        assertEquals(100, status.getCompletionPercentage());
+
+        assertNull(status.getFailureReason());
+        assertEquals(4, status.getTotalStepCount());
+        assertEquals(4, status.getCompletedStepCount());
+
+        int counter = 0;
+        for (final FlowFileSummary summary : status.getFlowFileSummaries()) {
+            assertEquals((30050 - 1 - counter++), summary.getSize());
+        }
+    }
+
 
     private class TestSwapManager implements FlowFileSwapManager {
         private final Map<String, List<FlowFileRecord>> swappedOut = new HashMap<>();

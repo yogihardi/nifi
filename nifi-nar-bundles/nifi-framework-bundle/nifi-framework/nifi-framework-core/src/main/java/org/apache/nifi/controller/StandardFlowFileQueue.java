@@ -26,9 +26,11 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +75,7 @@ import org.apache.nifi.reporting.Severity;
 import org.apache.nifi.scheduling.SchedulingStrategy;
 import org.apache.nifi.util.FormatUtils;
 import org.apache.nifi.util.concurrency.TimedLock;
+import org.apache.nifi.web.api.dto.FlowFileSummaryDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -907,7 +910,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
             public void run() {
                 int position = 0;
                 int resultCount = 0;
-                final List<FlowFileSummary> summaries = new ArrayList<>(activeQueue.size());
+                final Comparator<FlowFileSummary> comparator = FlowFileSummaries.createComparator(sortColumn, direction);
+                final NavigableSet<FlowFileSummary> summaries = new TreeSet<>(comparator);
                 int completedStepCount = 0;
 
                 // we need a write lock while using the Active Queue because we can't iterate over it - we have to poll from it
@@ -927,9 +931,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
 
                             if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
                                 summaries.add(summarize(flowFile, position));
-                                if (++resultCount >= maxResults) {
-                                    logger.debug("{} Reached max number of results of {} from active queue; listing complete", StandardFlowFileQueue.this, maxResults);
-                                    break;
+                                if (summaries.size() > maxResults) {
+                                    summaries.pollLast();
                                 }
                             }
                         }
@@ -944,54 +947,48 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
 
                 listRequest.setCompletedStepCount(++completedStepCount);
 
-                if (summaries.size() < maxResults) {
-                    position = activeQueue.size();
-                    sourceLoop: try {
-                        // We are now iterating over swap files, and we don't need the write lock for this, just the read lock, since
-                        // we are not modifying anything.
-                        readLock.lock();
-                        try {
-                            for (final String location : swapLocations) {
-                                logger.debug("{} Performing listing of FlowFiles for Swap Location {}", StandardFlowFileQueue.this, location);
-                                final List<FlowFileRecord> flowFiles = swapManager.peek(location, StandardFlowFileQueue.this);
-                                for (final FlowFileRecord flowFile : flowFiles) {
-                                    position++;
-
-                                    if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
-                                        summaries.add(summarize(flowFile, position));
-                                        if (++resultCount >= maxResults) {
-                                            logger.debug("{} Reached max number of results of {}; listing complete", StandardFlowFileQueue.this, maxResults);
-                                            break sourceLoop;
-                                        }
-                                    }
-                                }
-
-                                listRequest.setCompletedStepCount(++completedStepCount);
-                            }
-
-                            logger.debug("{} Performing listing of FlowFiles from Swap Queue", StandardFlowFileQueue.this);
-                            for (final FlowFileRecord flowFile : swapQueue) {
+                position = activeQueue.size();
+                try {
+                    // We are now iterating over swap files, and we don't need the write lock for this, just the read lock, since
+                    // we are not modifying anything.
+                    readLock.lock();
+                    try {
+                        for (final String location : swapLocations) {
+                            logger.debug("{} Performing listing of FlowFiles for Swap Location {}", StandardFlowFileQueue.this, location);
+                            final List<FlowFileRecord> flowFiles = swapManager.peek(location, StandardFlowFileQueue.this);
+                            for (final FlowFileRecord flowFile : flowFiles) {
                                 position++;
 
                                 if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
                                     summaries.add(summarize(flowFile, position));
-                                    if (++resultCount >= maxResults) {
-                                        logger.debug("{} Reached max number of results of {}; listing complete", StandardFlowFileQueue.this, maxResults);
-                                        break sourceLoop;
+                                    if (summaries.size() > maxResults) {
+                                        summaries.pollLast();
                                     }
                                 }
                             }
 
                             listRequest.setCompletedStepCount(++completedStepCount);
-                        } finally {
-                            readLock.unlock("List FlowFiles");
                         }
 
-                        break sourceLoop;
-                    } catch (final IOException ioe) {
-                        logger.error("Failed to read swapped FlowFiles in order to perform listing of queue " + StandardFlowFileQueue.this, ioe);
-                        listRequest.setFailure("Could not read FlowFiles from queue. Check log files for more details.");
+                        logger.debug("{} Performing listing of FlowFiles from Swap Queue", StandardFlowFileQueue.this);
+                        for (final FlowFileRecord flowFile : swapQueue) {
+                            position++;
+
+                            if (preparedQuery == null || "true".equals(preparedQuery.evaluateExpressions(flowFile))) {
+                                summaries.add(summarize(flowFile, position));
+                                if (summaries.size() > maxResults) {
+                                    summaries.pollLast();
+                                }
+                            }
+                        }
+
+                        listRequest.setCompletedStepCount(++completedStepCount);
+                    } finally {
+                        readLock.unlock("List FlowFiles");
                     }
+                } catch (final IOException ioe) {
+                    logger.error("Failed to read swapped FlowFiles in order to perform listing of queue " + StandardFlowFileQueue.this, ioe);
+                    listRequest.setFailure("Could not read FlowFiles from queue. Check log files for more details.");
                 }
 
                 // We have now completed the listing successfully. Set the number of completed steps to the total number of steps. We may have
@@ -999,7 +996,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                 logger.debug("{} Completed listing of FlowFiles", StandardFlowFileQueue.this);
                 listRequest.setCompletedStepCount(listRequest.getTotalStepCount());
                 listRequest.setState(ListFlowFileState.COMPLETE);
-                listRequest.setFlowFileSummaries(summaries);
+                listRequest.setFlowFileSummaries(new ArrayList<FlowFileSummary>(summaries));
             }
         }, "List FlowFiles for Connection " + getIdentifier());
         t.setDaemon(true);
