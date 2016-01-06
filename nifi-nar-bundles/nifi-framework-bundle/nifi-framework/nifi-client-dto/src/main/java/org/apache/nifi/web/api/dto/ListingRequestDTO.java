@@ -67,7 +67,7 @@ public class ListingRequestDTO {
      * @return the URI for this listing request.
      */
     @ApiModelProperty(
-        value = "The URI for futures requests to this listing request."
+        value = "The URI for future requests to this listing request."
     )
     public String getUri() {
         return uri;

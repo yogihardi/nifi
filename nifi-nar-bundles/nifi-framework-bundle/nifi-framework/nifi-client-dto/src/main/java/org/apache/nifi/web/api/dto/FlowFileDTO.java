@@ -93,7 +93,7 @@ public class FlowFileDTO extends FlowFileSummaryDTO {
      * @return the offset into the the Content Claim where the FlowFile's content begins, or <code>null</code> if no Content Claim exists
      */
     @ApiModelProperty(
-        value = "The offset into the content claim where the flowfiles content begins."
+        value = "The offset into the content claim where the flowfile's content begins."
     )
     public Long getContentClaimOffset() {
         return contentClaimOffset;

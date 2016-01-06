@@ -109,7 +109,7 @@ public class ConnectionResource extends ApplicationResource {
     private String groupId;
 
     /**
-     * Populate the uri's for the specified connections.
+     * Populate the URIs for the specified connections.
      *
      * @param connections connections
      * @return dtos
@@ -122,7 +122,7 @@ public class ConnectionResource extends ApplicationResource {
     }
 
     /**
-     * Populate the uri's for the specified connection.
+     * Populate the URIs for the specified connection.
      *
      * @param connection connection
      * @return dto
@@ -134,7 +134,7 @@ public class ConnectionResource extends ApplicationResource {
     }
 
     /**
-     * Populate the uri's for the specified flowfile listing.
+     * Populate the URIs for the specified flowfile listing.
      *
      * @param connectionId connection
      * @param flowFileListing flowfile listing
@@ -154,7 +154,7 @@ public class ConnectionResource extends ApplicationResource {
     }
 
     /**
-     * Populate the uri's for the specified flowfile.
+     * Populate the URIs for the specified flowfile.
      *
      * @param connectionId the connection id
      * @param flowFile the flowfile

@@ -72,7 +72,7 @@ public class DropRequestDTO {
      * @return The uri
      */
     @ApiModelProperty(
-            value = "The URI for futures requests to this drop request."
+            value = "The URI for future requests to this drop request."
     )
     public String getUri() {
         return uri;
