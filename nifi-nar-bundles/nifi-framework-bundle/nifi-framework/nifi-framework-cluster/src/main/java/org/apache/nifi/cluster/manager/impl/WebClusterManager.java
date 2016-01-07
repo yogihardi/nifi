@@ -2447,7 +2447,7 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
     }
 
     private static boolean isListFlowFilesEndpoint(final URI uri, final String method) {
-        if ("GET".equalsIgnoreCase(method) && LISTING_REQUEST_URI.matcher(uri.getPath()).matches()) {
+        if (("GET".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) && LISTING_REQUEST_URI.matcher(uri.getPath()).matches()) {
             return true;
         } else if ("POST".equalsIgnoreCase(method) && LISTING_REQUESTS_URI.matcher(uri.getPath()).matches()) {
             return true;
@@ -2516,7 +2516,7 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
                 || isProvenanceQueryEndpoint(uri, method) || isProvenanceEventEndpoint(uri, method)
                 || isControllerServicesEndpoint(uri, method) || isControllerServiceEndpoint(uri, method) || isControllerServiceReferenceEndpoint(uri, method)
                 || isReportingTasksEndpoint(uri, method) || isReportingTaskEndpoint(uri, method)
-                || isDropRequestEndpoint(uri, method);
+                || isDropRequestEndpoint(uri, method) || isListFlowFilesEndpoint(uri, method);
     }
 
     private void mergeProcessorValidationErrors(final ProcessorDTO processor, Map<NodeIdentifier, ProcessorDTO> processorMap) {
@@ -2860,8 +2860,7 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
      * @param listingRequestMap the mapping of all responses being merged
      */
     private void mergeListingRequests(final ListingRequestDTO listingRequest, final Map<NodeIdentifier, ListingRequestDTO> listingRequestMap) {
-        final Comparator<FlowFileSummaryDTO> comparator = FlowFileSummaries.createDTOComparator(
-            SortColumn.valueOf(listingRequest.getSortColumn()), SortDirection.valueOf(listingRequest.getSortDirection()));
+        final Comparator<FlowFileSummaryDTO> comparator = FlowFileSummaries.createDTOComparator(SortColumn.QUEUE_POSITION, SortDirection.ASCENDING);
 
         final NavigableSet<FlowFileSummaryDTO> flowFileSummaries = new TreeSet<>(comparator);
 
@@ -2898,15 +2897,17 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
                 state = nodeState;
             }
 
-            for (final FlowFileSummaryDTO summaryDTO : nodeRequest.getFlowFileSummaries()) {
-                summaryDTO.setClusterNodeId(nodeIdentifier.getId());
-                summaryDTO.setClusterNodeAddress(nodeAddress);
+            if (nodeRequest.getFlowFileSummaries() != null) {
+                for (final FlowFileSummaryDTO summaryDTO : nodeRequest.getFlowFileSummaries()) {
+                    summaryDTO.setClusterNodeId(nodeIdentifier.getId());
+                    summaryDTO.setClusterNodeAddress(nodeAddress);
 
-                flowFileSummaries.add(summaryDTO);
+                    flowFileSummaries.add(summaryDTO);
 
-                // Keep the set from growing beyond our max
-                if (flowFileSummaries.size() > listingRequest.getMaxResults()) {
-                    flowFileSummaries.pollLast();
+                    // Keep the set from growing beyond our max
+                    if (flowFileSummaries.size() > listingRequest.getMaxResults()) {
+                        flowFileSummaries.pollLast();
+                    }
                 }
             }
 

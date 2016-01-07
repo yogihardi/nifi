@@ -38,8 +38,6 @@ public class ListingRequestDTO {
     private Integer percentCompleted;
     private Boolean finished;
     private String failureReason;
-    private String sortColumn;
-    private String sortDirection;
     private Integer maxResults;
     private Integer totalStepCount;
     private Integer completedStepCount;
@@ -175,30 +173,6 @@ public class ListingRequestDTO {
 
     public void setFlowFileSummaries(List<FlowFileSummaryDTO> flowFileSummaries) {
         this.flowFileSummaries = flowFileSummaries;
-    }
-
-    /**
-     * @return the column on which the listing is sorted
-     */
-    @ApiModelProperty(value = "The column on which the FlowFiles are sorted.")
-    public String getSortColumn() {
-        return sortColumn;
-    }
-
-    public void setSortColumn(String sortColumn) {
-        this.sortColumn = sortColumn;
-    }
-
-    /**
-     * @return the direction in which the FlowFiles are sorted
-     */
-    @ApiModelProperty(value = "The direction in which the FlowFiles are sorted. Either ASCENDING or DESCENDING.")
-    public String getSortDirection() {
-        return sortDirection;
-    }
-
-    public void setSortDirection(String sortDirection) {
-        this.sortDirection = sortDirection;
     }
 
     /**
