@@ -31,4 +31,5 @@
         <div class="clear"></div>
     </div>
     <div id="queue-listing-table"></div>
+    <div id="queue-listing-message" class="hidden"></div>
 </div>

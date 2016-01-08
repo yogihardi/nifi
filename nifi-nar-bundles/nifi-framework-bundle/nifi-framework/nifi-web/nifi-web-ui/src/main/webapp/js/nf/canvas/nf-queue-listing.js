@@ -229,6 +229,23 @@ nf.QueueListing = (function () {
                         // update the last updated time
                         $('#queue-listing-last-refreshed').text(listingRequest.lastUpdated);
 
+                        // show a message for the queue listing if necessary
+                        var queueListingTable = $('#queue-listing-table');
+                        var queueListingMessage = $('#queue-listing-message');
+                        if (listingRequest.sourceRunning === true || listingRequest.destinationRunning === true) {
+                            if (listingRequest.souceRunning === true && listingRequest.destinationRunning === true) {
+                                queueListingMessage.text('The source and destination of this queue are currently running. This listing may no longer be accurate.').show();
+                            } else if (listingRequest.sourceRunning === true) {
+                                queueListingMessage.text('The source of this queue is currently running. This listing may no longer be accurate.').show();
+                            } else if (listingRequest.destinationRunning === true) {
+                                queueListingMessage.text('The destination of this queue is currently running. This listing may no longer be accurate.').show();
+                            }
+                            queueListingTable.css('bottom', '35px');
+                        } else {
+                            queueListingMessage.text('').hide();
+                            queueListingTable.css('bottom', '20px');
+                        }
+
                         // get the grid to load the data
                         var queueListingGrid = $('#queue-listing-table').data('gridInstance');
                         var queueListingData = queueListingGrid.getData();

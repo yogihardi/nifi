@@ -824,7 +824,18 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
 
     @Override
     public ListingRequestDTO deleteFlowFileListingRequest(String groupId, String connectionId, String listingRequestId) {
-        return dtoFactory.createListingRequestDTO(connectionDAO.deleteFlowFileListingRequest(groupId, connectionId, listingRequestId));
+        final ListingRequestDTO listRequest = dtoFactory.createListingRequestDTO(connectionDAO.deleteFlowFileListingRequest(groupId, connectionId, listingRequestId));
+
+        // include whether the source and destination are running
+        final Connection connection = connectionDAO.getConnection(groupId, connectionId);
+        if (connection.getSource() != null) {
+            listRequest.setSourceRunning(connection.getSource().isRunning());
+        }
+        if (connection.getDestination() != null) {
+            listRequest.setDestinationRunning(connection.getDestination().isRunning());
+        }
+
+        return listRequest;
     }
 
     @Override
@@ -1085,7 +1096,18 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
 
     @Override
     public ListingRequestDTO createFlowFileListingRequest(String groupId, String connectionId, String listingRequestId) {
-        return dtoFactory.createListingRequestDTO(connectionDAO.createFlowFileListingRequest(groupId, connectionId, listingRequestId));
+        final ListingRequestDTO listRequest = dtoFactory.createListingRequestDTO(connectionDAO.createFlowFileListingRequest(groupId, connectionId, listingRequestId));
+
+        // include whether the source and destination are running
+        final Connection connection = connectionDAO.getConnection(groupId, connectionId);
+        if (connection.getSource() != null) {
+            listRequest.setSourceRunning(connection.getSource().isRunning());
+        }
+        if (connection.getDestination() != null) {
+            listRequest.setDestinationRunning(connection.getDestination().isRunning());
+        }
+
+        return listRequest;
     }
 
     @Override
@@ -2149,7 +2171,18 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
 
     @Override
     public ListingRequestDTO getFlowFileListingRequest(String groupId, String connectionId, String listingRequestId) {
-        return dtoFactory.createListingRequestDTO(connectionDAO.getFlowFileListingRequest(groupId, connectionId, listingRequestId));
+        final ListingRequestDTO listRequest = dtoFactory.createListingRequestDTO(connectionDAO.getFlowFileListingRequest(groupId, connectionId, listingRequestId));
+
+        // include whether the source and destination are running
+        final Connection connection = connectionDAO.getConnection(groupId, connectionId);
+        if (connection.getSource() != null) {
+            listRequest.setSourceRunning(connection.getSource().isRunning());
+        }
+        if (connection.getDestination() != null) {
+            listRequest.setDestinationRunning(connection.getDestination().isRunning());
+        }
+
+        return listRequest;
     }
 
     @Override

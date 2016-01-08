@@ -43,6 +43,9 @@ public class ListingRequestDTO {
     private Integer totalStepCount;
     private Integer completedStepCount;
 
+    private Boolean isSourceRunning;
+    private Boolean isDestinationRunning;
+
     private String state;
     private QueueSizeDTO queueSize;
 
@@ -223,5 +226,29 @@ public class ListingRequestDTO {
 
     public void setQueueSize(QueueSizeDTO queueSize) {
         this.queueSize = queueSize;
+    }
+
+    /**
+     * @return whether the source is running
+     */
+    @ApiModelProperty(value = "Whether the source of the connection is running")
+    public Boolean getSourceRunning() {
+        return isSourceRunning;
+    }
+
+    public void setSourceRunning(Boolean sourceRunning) {
+        isSourceRunning = sourceRunning;
+    }
+
+    /**
+     * @return whether the destination is running
+     */
+    @ApiModelProperty(value = "Whether the destination of the connection is running")
+    public Boolean getDestinationRunning() {
+        return isDestinationRunning;
+    }
+
+    public void setDestinationRunning(Boolean destinationRunning) {
+        isDestinationRunning = destinationRunning;
     }
 }

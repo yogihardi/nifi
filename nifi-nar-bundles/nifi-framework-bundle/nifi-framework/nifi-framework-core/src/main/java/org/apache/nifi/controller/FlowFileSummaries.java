@@ -60,12 +60,6 @@ public class FlowFileSummaries {
         }
     }
 
-    /**
-     * Creates a comparator for comparing two FlowFileSummaryDTO objects. The objects must be fully populated in
-     * @param column
-     * @param direction
-     * @return
-     */
     public static Comparator<FlowFileSummaryDTO> createDTOComparator(final SortColumn column, final SortDirection direction) {
         final Comparator<FlowFileSummaryDTO> comparator = new Comparator<FlowFileSummaryDTO>() {
             @Override

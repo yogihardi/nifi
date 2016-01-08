@@ -21,10 +21,10 @@
 
 #queue-listing-container {
     position: absolute;
-    top: 0px;
-    bottom: 0px;
-    left: 0px;
-    right: 0px;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
 }
 
 #queue-listing-header-container {
@@ -81,7 +81,7 @@
     float: right;
     line-height: normal;
     margin-right: 20px;
-    margin-top: 9px;
+    margin-top: 6px;
 }
 
 /* queue listing table */
@@ -94,6 +94,16 @@
     right: 20px;
     border: 1px solid #666;
     overflow: hidden;
+}
+
+/* queue listing table */
+
+#queue-listing-message {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    color: #f00;
+    font-size: 10px;
 }
 
 /* flowfile details */

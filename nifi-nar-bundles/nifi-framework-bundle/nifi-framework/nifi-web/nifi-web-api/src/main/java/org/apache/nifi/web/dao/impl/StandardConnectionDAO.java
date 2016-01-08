@@ -124,7 +124,7 @@ public class StandardConnectionDAO extends ComponentDAO implements ConnectionDAO
             final FlowFileRecord flowFile = queue.getFlowFile(flowFileUuid);
 
             if (flowFile == null) {
-                throw new ResourceNotFoundException(String.format("Unable to find FlowFile '%s' in Connection '%s'.", flowFileUuid, id));
+                throw new ResourceNotFoundException(String.format("The desired FlowFile[uuid=%s] is no longer in the active queue.", flowFileUuid));
             }
 
             return flowFile;
