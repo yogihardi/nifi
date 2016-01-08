@@ -60,28 +60,57 @@ public class FlowFileSummaries {
         }
     }
 
+    /**
+     * Creates a comparator for comparing two FlowFileSummaryDTO objects. The objects must be fully populated in
+     * @param column
+     * @param direction
+     * @return
+     */
     public static Comparator<FlowFileSummaryDTO> createDTOComparator(final SortColumn column, final SortDirection direction) {
         final Comparator<FlowFileSummaryDTO> comparator = new Comparator<FlowFileSummaryDTO>() {
             @Override
             public int compare(final FlowFileSummaryDTO o1, final FlowFileSummaryDTO o2) {
+                final int val;
                 switch (column) {
                     case FILENAME:
-                        return o1.getFilename().compareTo(o2.getFilename());
+                        val = o1.getFilename().compareTo(o2.getFilename());
+                        break;
                     case FLOWFILE_AGE:
-                        return o1.getLineageDuration().compareTo(o2.getLineageDuration());
+                        val = o1.getLineageDuration().compareTo(o2.getLineageDuration());
+                        break;
                     case FLOWFILE_SIZE:
-                        return Long.compare(o1.getSize(), o2.getSize());
+                        val = Long.compare(o1.getSize(), o2.getSize());
+                        break;
                     case FLOWFILE_UUID:
-                        return o1.getUuid().compareTo(o2.getUuid());
+                        val = o1.getUuid().compareTo(o2.getUuid());
+                        break;
                     case PENALIZATION:
-                        return Boolean.compare(o1.getPenalized(), o2.getPenalized());
+                        val = Boolean.compare(o1.getPenalized(), o2.getPenalized());
+                        break;
                     case QUEUE_POSITION:
-                        return Long.compare(o1.getPosition(), o2.getPosition());
+                        val = Long.compare(o1.getPosition(), o2.getPosition());
+                        break;
                     case QUEUED_DURATION:
-                        return o1.getQueuedDuration().compareTo(o2.getQueuedDuration());
+                        val = o1.getQueuedDuration().compareTo(o2.getQueuedDuration());
+                        break;
+                    default:
+                        return 0;
                 }
 
-                return 0;
+                if (val == 0) {
+                    // secondary sort on cluster node id if populated
+                    if (o1.getClusterNodeId() == null && o2.getClusterNodeId() == null) {
+                        return val;
+                    } else if (o2.getClusterNodeId() == null) {
+                        return -1;
+                    } else if (o1.getClusterNodeId() == null) {
+                        return 1;
+                    } else {
+                        return o1.getClusterNodeId().compareTo(o2.getClusterNodeId());
+                    }
+                } else {
+                    return val;
+                }
             }
         };
 

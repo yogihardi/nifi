@@ -22,6 +22,7 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
+import org.apache.nifi.web.api.dto.util.TimeAdapter;
 import org.apache.nifi.web.api.dto.util.TimestampAdapter;
 
 import com.wordnik.swagger.annotations.ApiModelProperty;
@@ -93,7 +94,7 @@ public class ListingRequestDTO {
     /**
      * @return the time this request was last updated
      */
-    @XmlJavaTypeAdapter(TimestampAdapter.class)
+    @XmlJavaTypeAdapter(TimeAdapter.class)
     @ApiModelProperty(
         value = "The last time this listing request was updated."
     )

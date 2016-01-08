@@ -41,19 +41,28 @@
 }
 
 #queue-listing-stats-container {
-    margin-left: 15px;
-    margin-top: 30px;
+    margin-left: 20px;
+    margin-top: 18px;
     -webkit-user-select: none;
     -moz-user-select: none;
 }
 
-#queue-listing-stats {
-    font-size: 9px;
+#queue-listing-refresh-button {
+    float: left;
+    height: 24px;
+    width: 26px;
+}
+
+#queue-listing-last-refreshed-container {
+    float: left;
+    color: #666;
+    font-weight: normal;
+    margin-top: 6px;
+    margin-left: 3px;
+}
+
+#queue-listing-last-refreshed {
     font-weight: bold;
-    color: #9f6000;
-    clear: left;
-    line-height: normal;
-    margin-left: 5px;
 }
 
 #queue-listing-loading-container {
@@ -63,6 +72,16 @@
     background-color: transparent;
     margin-top: 4px;
     margin-left: 3px;
+}
+
+#queue-listing-stats {
+    font-size: 9px;
+    font-weight: bold;
+    color: #9f6000;
+    float: right;
+    line-height: normal;
+    margin-right: 20px;
+    margin-top: 9px;
 }
 
 /* queue listing table */

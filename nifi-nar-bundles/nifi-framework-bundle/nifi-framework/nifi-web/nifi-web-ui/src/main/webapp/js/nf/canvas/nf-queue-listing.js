@@ -226,6 +226,9 @@ nf.QueueListing = (function () {
                         $('#total-flowfiles-count').text(nf.Common.formatInteger(listingRequest.queueSize.objectCount));
                         $('#total-flowfiles-size').text(nf.Common.formatDataSize(listingRequest.queueSize.byteCount));
 
+                        // update the last updated time
+                        $('#queue-listing-last-refreshed').text(listingRequest.lastUpdated);
+
                         // get the grid to load the data
                         var queueListingGrid = $('#queue-listing-table').data('gridInstance');
                         var queueListingData = queueListingGrid.getData();
@@ -420,6 +423,12 @@ nf.QueueListing = (function () {
                 resetTableSize();
             });
 
+            // define mouse over event for the refresh button
+            nf.Common.addHoverEffect('#queue-listing-refresh-button', 'button-refresh', 'button-refresh-hover').click(function () {
+                var connection = $('#queue-listing-table').data('connection');
+                performListing(connection);
+            });
+
             // define a custom formatter for showing more processor details
             var moreDetailsFormatter = function (row, cell, value, columnDef, dataContext) {
                 return '<img src="images/iconDetails.png" title="View Details" class="pointer show-flowfile-details" style="margin-top: 5px; float: left;"/>';
@@ -449,13 +458,13 @@ nf.QueueListing = (function () {
             // initialize the queue listing table
             var queueListingColumns = [
                 {id: 'moreDetails', field: 'moreDetails', name: '&nbsp;', sortable: false, resizable: false, formatter: moreDetailsFormatter, width: 50, maxWidth: 50},
-                {id: 'QUEUE_POSITION', name: 'Position', field: 'position', sortable: false, resizable: false, width: 75, maxWidth: 75},
-                {id: 'FLOWFILE_UUID', name: 'UUID', field: 'uuid', sortable: false, resizable: true},
-                {id: 'FILENAME', name: 'Filename', field: 'filename', sortable: false, resizable: true},
-                {id: 'FLOWFILE_SIZE', name: 'File Size', field: 'size', sortable: false, resizable: true, defaultSortAsc: false, formatter: dataSizeFormatter},
-                {id: 'QUEUED_DURATION', name: 'Queued Duration', field: 'queuedDuration', sortable: false, resizable: true, formatter: durationFormatter},
-                {id: 'FLOWFILE_AGE', name: 'Lineage Duration', field: 'lineageDuration', sortable: false, resizable: true, formatter: durationFormatter},
-                {id: 'PENALIZATION', name: 'Penalized', field: 'penalized', sortable: false, resizable: false, width: 100, maxWidth: 100, formatter: penalizedFormatter}
+                {id: 'position', name: 'Position', field: 'position', sortable: false, resizable: false, width: 75, maxWidth: 75},
+                {id: 'uuid', name: 'UUID', field: 'uuid', sortable: false, resizable: true},
+                {id: 'filename', name: 'Filename', field: 'filename', sortable: false, resizable: true},
+                {id: 'size', name: 'File Size', field: 'size', sortable: false, resizable: true, defaultSortAsc: false, formatter: dataSizeFormatter},
+                {id: 'queuedDuration', name: 'Queued Duration', field: 'queuedDuration', sortable: false, resizable: true, formatter: durationFormatter},
+                {id: 'lineageDuration', name: 'Lineage Duration', field: 'lineageDuration', sortable: false, resizable: true, formatter: durationFormatter},
+                {id: 'penalized', name: 'Penalized', field: 'penalized', sortable: false, resizable: false, width: 100, maxWidth: 100, formatter: penalizedFormatter}
             ];
 
             // conditionally show the cluster node identifier
