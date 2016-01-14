@@ -378,8 +378,6 @@ public final class DtoFactory {
         dto.setFailureReason(listingRequest.getFailureReason());
         dto.setFinished(isListingRequestComplete(listingRequest.getState()));
         dto.setMaxResults(listingRequest.getMaxResults());
-        dto.setTotalStepCount(listingRequest.getTotalStepCount());
-        dto.setCompletedStepCount(listingRequest.getCompletedStepCount());
         dto.setPercentCompleted(listingRequest.getCompletionPercentage());
 
         dto.setQueueSize(createQueueSizeDTO(listingRequest.getQueueSize()));

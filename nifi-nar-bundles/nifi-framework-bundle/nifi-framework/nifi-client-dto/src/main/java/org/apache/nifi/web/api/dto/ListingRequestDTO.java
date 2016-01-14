@@ -40,8 +40,6 @@ public class ListingRequestDTO {
     private Boolean finished;
     private String failureReason;
     private Integer maxResults;
-    private Integer totalStepCount;
-    private Integer completedStepCount;
 
     private Boolean isSourceRunning;
     private Boolean isDestinationRunning;
@@ -189,31 +187,6 @@ public class ListingRequestDTO {
 
     public void setMaxResults(Integer maxResults) {
         this.maxResults = maxResults;
-    }
-
-
-    /**
-     * @return the total number of steps required to complete the listing
-     */
-    @ApiModelProperty(value = "The total number of steps required to complete the listing")
-    public Integer getTotalStepCount() {
-        return totalStepCount;
-    }
-
-    public void setTotalStepCount(Integer totalStepCount) {
-        this.totalStepCount = totalStepCount;
-    }
-
-    /**
-     * @return the number of steps that have already been completed. This value will be >= 0 and <= the total step count
-     */
-    @ApiModelProperty(value = "The number of steps that have already been completed. This value will be between 0 and the total step count (inclusive)")
-    public Integer getCompletedStepCount() {
-        return completedStepCount;
-    }
-
-    public void setCompletedStepCount(Integer completedStepCount) {
-        this.completedStepCount = completedStepCount;
     }
 
     /**

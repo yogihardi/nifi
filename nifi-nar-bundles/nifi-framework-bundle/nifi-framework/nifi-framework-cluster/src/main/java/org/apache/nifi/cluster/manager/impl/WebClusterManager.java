@@ -127,7 +127,6 @@ import org.apache.nifi.cluster.protocol.message.ReconnectionFailureMessage;
 import org.apache.nifi.cluster.protocol.message.ReconnectionRequestMessage;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.controller.ControllerService;
-import org.apache.nifi.controller.FlowFileSummaries;
 import org.apache.nifi.controller.Heartbeater;
 import org.apache.nifi.controller.ReportingTaskNode;
 import org.apache.nifi.controller.ScheduledState;
@@ -137,8 +136,6 @@ import org.apache.nifi.controller.ValidationContextFactory;
 import org.apache.nifi.controller.exception.ComponentLifeCycleException;
 import org.apache.nifi.controller.queue.DropFlowFileState;
 import org.apache.nifi.controller.queue.ListFlowFileState;
-import org.apache.nifi.controller.queue.SortColumn;
-import org.apache.nifi.controller.queue.SortDirection;
 import org.apache.nifi.controller.reporting.ClusteredReportingTaskNode;
 import org.apache.nifi.controller.reporting.ReportingTaskInstantiationException;
 import org.apache.nifi.controller.reporting.ReportingTaskProvider;
@@ -2860,7 +2857,28 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
      * @param listingRequestMap the mapping of all responses being merged
      */
     private void mergeListingRequests(final ListingRequestDTO listingRequest, final Map<NodeIdentifier, ListingRequestDTO> listingRequestMap) {
-        final Comparator<FlowFileSummaryDTO> comparator = FlowFileSummaries.createDTOComparator(SortColumn.QUEUE_POSITION, SortDirection.ASCENDING);
+        final Comparator<FlowFileSummaryDTO> comparator = new Comparator<FlowFileSummaryDTO>() {
+            @Override
+            public int compare(final FlowFileSummaryDTO dto1, final FlowFileSummaryDTO dto2) {
+                int positionCompare = dto1.getPosition().compareTo(dto2.getPosition());
+                if (positionCompare != 0) {
+                    return positionCompare;
+                }
+
+                final String address1 = dto1.getClusterNodeAddress();
+                final String address2 = dto2.getClusterNodeAddress();
+                if (address1 == null && address2 == null) {
+                    return 0;
+                }
+                if (address1 == null) {
+                    return 1;
+                }
+                if (address2 == null) {
+                    return -1;
+                }
+                return address1.compareTo(address2);
+            }
+        };
 
         final NavigableSet<FlowFileSummaryDTO> flowFileSummaries = new TreeSet<>(comparator);
 
@@ -2876,8 +2894,10 @@ public class WebClusterManager implements HttpClusterManager, ProtocolHandler, C
 
             final ListingRequestDTO nodeRequest = entry.getValue();
 
-            numStepsCompleted += nodeRequest.getCompletedStepCount();
-            numStepsTotal += nodeRequest.getTotalStepCount();
+            numStepsTotal++;
+            if (Boolean.TRUE.equals(nodeRequest.getFinished())) {
+                numStepsCompleted++;
+            }
 
             final QueueSizeDTO nodeQueueSize = nodeRequest.getQueueSize();
             objectCount += nodeQueueSize.getObjectCount();
