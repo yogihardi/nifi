@@ -107,6 +107,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
     private final FlowFileRepository flowFileRepository;
     private final ProvenanceEventRepository provRepository;
     private final ResourceClaimManager resourceClaimManager;
+    private final Heartbeater heartbeater;
 
     private final ConcurrentMap<String, DropFlowFileRequest> dropRequestMap = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ListFlowFileRequest> listRequestMap = new ConcurrentHashMap<>();
@@ -115,7 +116,8 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
     private final ProcessScheduler scheduler;
 
     public StandardFlowFileQueue(final String identifier, final Connection connection, final FlowFileRepository flowFileRepo, final ProvenanceEventRepository provRepo,
-        final ResourceClaimManager resourceClaimManager, final ProcessScheduler scheduler, final FlowFileSwapManager swapManager, final EventReporter eventReporter, final int swapThreshold) {
+        final ResourceClaimManager resourceClaimManager, final ProcessScheduler scheduler, final FlowFileSwapManager swapManager, final EventReporter eventReporter, final int swapThreshold,
+        final Heartbeater heartbeater) {
         activeQueue = new PriorityQueue<>(20, new Prioritizer(new ArrayList<FlowFilePrioritizer>()));
         priorities = new ArrayList<>();
         swapQueue = new ArrayList<>();
@@ -129,6 +131,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
         this.swapThreshold = swapThreshold;
         this.scheduler = scheduler;
         this.connection = connection;
+        this.heartbeater = heartbeater;
 
         readLock = new TimedLock(this.lock.readLock(), identifier + " Read Lock", 100);
         writeLock = new TimedLock(this.lock.writeLock(), identifier + " Write Lock", 100);
@@ -1137,6 +1140,9 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
                         logger.info("Successfully dropped {} FlowFiles ({} bytes) from Connection with ID {} on behalf of {}",
                             dropRequest.getDroppedSize().getObjectCount(), dropRequest.getDroppedSize().getByteCount(), StandardFlowFileQueue.this.getIdentifier(), requestor);
                         dropRequest.setState(DropFlowFileState.COMPLETE);
+                        if (heartbeater != null) {
+                            heartbeater.heartbeat();
+                        }
                     } catch (final Exception e) {
                         logger.error("Failed to drop FlowFiles from Connection with ID {} due to {}", StandardFlowFileQueue.this.getIdentifier(), e.toString());
                         logger.error("", e);
