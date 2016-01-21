@@ -847,7 +847,7 @@ public final class StandardFlowFileQueue implements FlowFileQueue {
 
     @Override
     public ListFlowFileStatus listFlowFiles(final String requestIdentifier, final int maxResults) {
-        // purge any old requests from the map just to keep it clean. But if there are very requests, which is usually the case, then don't bother
+        // purge any old requests from the map just to keep it clean. But if there are very few requests, which is usually the case, then don't bother
         if (listRequestMap.size() > 10) {
             final List<String> toDrop = new ArrayList<>();
             for (final Map.Entry<String, ListFlowFileRequest> entry : listRequestMap.entrySet()) {
