@@ -223,6 +223,7 @@ nf.Canvas = (function () {
         // create the canvas
         svg = d3.select('#canvas-container').append('svg')
                 .on('contextmenu', function () {
+                	
                     // reset the canvas click flag
                     canvasClicked = false;
 
@@ -369,7 +370,7 @@ nf.Canvas = (function () {
         // handle canvas events
         svg.on('mousedown.selection', function () {
             canvasClicked = true;
-
+            
             if (d3.event.button !== 0) {
                 // prevent further propagation (to parents and others handlers 
                 // on the same element to prevent zoom behavior)

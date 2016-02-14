@@ -19,7 +19,7 @@
 */
 
 #canvas-container {
-    position: absolute;
+    position: relative;
     overflow: hidden;
     top: 117px;
     left: 0px;

@@ -93,6 +93,17 @@
         <jsp:include page="/WEB-INF/partials/canvas/connections-dialog.jsp"/>
         <jsp:include page="/WEB-INF/partials/canvas/flow-status.jsp"/>
         <div id="canvas-container" class="unselectable"></div>
+        <hr width="98%" size="2" color="black"/>
+        <div id="canvas-footer" style="
+		    height: 100px;
+		    background-color: white;
+		    z-index: 2;
+		    position: relative;
+		    padding: 10px;
+		    font-size: 12px;
+		    ">
+        <h1>This is footer</h1>
+        </div>
         <div id="canvas-tooltips">
             <div id="processor-tooltips"></div>
             <div id="port-tooltips"></div>
@@ -127,6 +138,7 @@
         <div id="faded-background"></div>
         <div id="glass-pane"></div>
         <div id="context-menu" class="unselectable"></div>
+        
         <span id="nifi-content-viewer-url" class="hidden"></span>
     </body>
 </html>

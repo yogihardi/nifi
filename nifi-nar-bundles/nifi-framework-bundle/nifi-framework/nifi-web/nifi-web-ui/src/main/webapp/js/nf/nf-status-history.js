@@ -201,6 +201,7 @@ nf.StatusHistory = (function () {
 
             // store the status history
             $('#status-history-dialog').data('status-history', statusHistory);
+            console.log(statusHistory);
 
             // chart the status history
             chart(statusHistory, descriptors);

@@ -47,7 +47,7 @@ nf.Processor = (function () {
      * Selects the processor elements against the current processor map.
      */
     var select = function () {
-        return processorContainer.selectAll('g.processor').data(processorMap.values(), function (d) {
+    	return processorContainer.selectAll('g.processor').data(processorMap.values(), function (d) {
             return d.component.id;
         });
     };
@@ -540,7 +540,7 @@ nf.Processor = (function () {
 
                     // get just the color code part
                     color = nf.Common.substringAfterLast(color, '#');
-
+                    
                     return 'url(#processor-background-' + color + ')';
                 });
     };
@@ -698,6 +698,7 @@ nf.Processor = (function () {
             } else {
                 return processorMap.get(id);
             }
+            console.log('get select processor clicked');
         },
         
         /**

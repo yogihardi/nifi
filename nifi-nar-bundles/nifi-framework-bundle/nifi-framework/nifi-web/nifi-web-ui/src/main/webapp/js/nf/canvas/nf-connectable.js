@@ -196,6 +196,7 @@ nf.Connectable = (function () {
         },
         
         activate: function (components) {
+                                        
             components
                     .on('mouseenter.connectable', function (d) {
                         if (allowConnection()) {
@@ -224,6 +225,24 @@ nf.Connectable = (function () {
                                                 'transform': 'translate(' + x + ', ' + y + ')'
                                             });
                                 }
+                                var selectionData = selection.datum();
+                                if (nf.CanvasUtils.isProcessor(selection)) {
+                                    var groupId = nf.Canvas.getGroupId();
+                                    var processorId = selectionData.component.id;
+                                    //nf.StatusHistory.showStandaloneProcessorChart(nf.Canvas.getGroupId(), selectionData.component.id);
+                                    
+                                     $.ajax({
+                                        type: 'GET',
+                                        url: '../nifi-api/controller/process-groups/' + encodeURIComponent(groupId) + '/processors/' + encodeURIComponent(processorId) + '/status/history',
+                                        dataType: 'json'
+                                    }).done(function (response) {
+                                        if (response.statusHistory.details !== null){
+                                          //$('#canvas-footer').prepend(response.statusHistory.details);
+                                          $('#canvas-footer').html('Processor status : '+ JSON.stringify(response.statusHistory.details));
+            
+                                        }
+                                    }).fail(nf.Common.handleAjaxError);
+                                }
                             }
                         }
                     })
@@ -233,6 +252,7 @@ nf.Connectable = (function () {
                         if (!addConnect.empty() && !addConnect.classed('dragging')) {
                             addConnect.remove();
                         }
+                        
                     })
                     // Using mouseover/out to workaround chrome issue #122746
                     .on('mouseover.connectable', function () {
@@ -245,6 +265,7 @@ nf.Connectable = (function () {
                         // remove all hover related classes
                         d3.select(this).classed('hover connectable-destination', false);
                     });
+                   
         }
     };
 }());
